@@ -9,12 +9,14 @@ from utility import is_user_authorized, get_user_firstname, build_search_pipelin
 from db import tmdb_col, files_col, comments_col
 from tmdb import POSTER_BASE_URL
 from app import bot
+import cache
 from config import TMDB_CHANNEL_ID, OWNER_ID
 from datetime import datetime, timezone
 from handlers.admin import router as admin_router
 from bson.objectid import ObjectId
 
 api = FastAPI()
+
 
 api.include_router(admin_router)
 
@@ -39,7 +41,7 @@ async def get_current_user(authorization: str = Header(None)):
 
     try:
         user_id = int(token)
-        if not await is_user_authorized(user_id):
+        if not is_user_authorized(user_id):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authorization required — please verify through the bot first.")
         return user_id
     except (ValueError, TypeError):
@@ -62,7 +64,7 @@ async def api_authorize(request: Request):
             detail="Invalid User ID format.",
         )
 
-    if not await is_user_authorized(user_id):
+    if not is_user_authorized(user_id):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authorization required — please verify through the bot first.",
@@ -77,11 +79,13 @@ async def get_user_me(user_id: int = Depends(get_current_user)):
     first_name = await get_user_firstname(user_id)
     return JSONResponse(content={"first_name": first_name})
 
-
-
-
 @api.get("/api/movies")
 async def get_movies(page: int = 1, search: str = None, category: str = None, sort: str = "year", user_id: int = Depends(get_current_user), tmdb_id: int = None, tmdb_type: str = None):
+    cache_key = f"movies:{page}:{search}:{category}:{sort}:{tmdb_id}:{tmdb_type}"
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return cached_data
+
     page_size = 10
     skip = (page - 1) * page_size
 
@@ -96,29 +100,36 @@ async def get_movies(page: int = 1, search: str = None, category: str = None, so
 
     sort_order = []
     if sort == "rating":
+        sort_order.append(("_id", -1))
         sort_order.append(("rating", -1))
-        sort_order.append(("_id", -1))
     elif sort == "year":
-        sort_order.append(("year", -1))
         sort_order.append(("_id", -1))
+        sort_order.append(("year", -1))
     else:  # Default to recent
         sort_order.append(("_id", -1))
     
-    movies = await tmdb_col.find(query).sort(sort_order).skip(skip).limit(page_size).to_list(length=page_size)
-    total_movies = await tmdb_col.count_documents(query)
+    movies = list(tmdb_col.find(query).sort(sort_order).skip(skip).limit(page_size))
+    total_movies = tmdb_col.count_documents(query)
 
     # Convert ObjectId to string
     for movie in movies:
         movie["_id"] = str(movie["_id"])
 
-    return {
+    data = {
         "movies": movies,
         "total_pages": (total_movies + page_size - 1) // page_size,
         "current_page": page
     }
+    cache.set(cache_key, data)
+    return data
 
 @api.get("/api/details/{tmdb_id}")
 async def get_movie_details(tmdb_id: str, tmdb_type: str, page: int = 1, user_id: int = Depends(get_current_user)):
+    cache_key = f"details:{tmdb_id}:{tmdb_type}:{page}"
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return cached_data
+
     try:
         tmdb_id = int(tmdb_id)
     except (ValueError, TypeError):
@@ -127,24 +138,26 @@ async def get_movie_details(tmdb_id: str, tmdb_type: str, page: int = 1, user_id
     page_size = 10
     skip = (page - 1) * page_size
 
-    files = await files_col.find({"tmdb_id": tmdb_id, "tmdb_type": tmdb_type}).skip(skip).limit(page_size).to_list(length=page_size)
-    total_files = await files_col.count_documents({"tmdb_id": tmdb_id, "tmdb_type": tmdb_type})
+    files = list(files_col.find({"tmdb_id": tmdb_id, "tmdb_type": tmdb_type}).skip(skip).limit(page_size))
+    total_files = files_col.count_documents({"tmdb_id": tmdb_id, "tmdb_type": tmdb_type})
 
     # Convert ObjectId to string and add stream URL
     for file in files:
         file["_id"] = str(file["_id"])
         file["stream_url"] = f"{MY_DOMAIN}/player/{bot.encode_file_link(file['channel_id'], file['message_id'])}"
 
-    return {
+    data = {
         "files": files,
         "total_pages": (total_files + page_size - 1) // page_size,
         "current_page": page
     }
+    cache.set(cache_key, data)
+    return data
 
 @api.get("/api/file/{file_id}")
 async def get_file_details(file_id: str, user_id: int = Depends(get_current_user)):
     try:
-        file = await files_col.find_one({"_id": ObjectId(file_id)})
+        file = files_col.find_one({"_id": ObjectId(file_id)})
         if not file:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
 
@@ -156,6 +169,11 @@ async def get_file_details(file_id: str, user_id: int = Depends(get_current_user
 
 @api.get("/api/others")
 async def get_others(page: int = 1, search: str = None, sort: str = "recent", user_id: int = Depends(get_current_user)):
+    cache_key = f"others:{page}:{search}:{sort}"
+    cached_data = cache.get(cache_key)
+    if cached_data:
+        return cached_data
+
     page_size = 10
     skip = (page - 1) * page_size
 
@@ -164,23 +182,25 @@ async def get_others(page: int = 1, search: str = None, sort: str = "recent", us
     if search:
         sanitized_search = bot.sanitize_query(search)
         pipeline = build_search_pipeline(sanitized_search, {"channel_id": {"$nin": TMDB_CHANNEL_ID}}, skip, page_size)
-        result = await files_col.aggregate(pipeline).to_list(length=None)
+        result = list(files_col.aggregate(pipeline))
         files = result[0]['results'] if result and 'results' in result[0] else []
         total_files = result[0]['totalCount'][0]['total'] if result and 'totalCount' in result[0] and result[0]['totalCount'] else 0
     else:
         query = {"channel_id": {"$nin": TMDB_CHANNEL_ID}}
-        files = await files_col.find(query).sort(sort_order).skip(skip).limit(page_size).to_list(length=page_size)
-        total_files = await files_col.count_documents(query)
+        files = list(files_col.find(query).sort(sort_order).skip(skip).limit(page_size))
+        total_files = files_col.count_documents(query)
 
     for file in files:
         file["_id"] = str(file["_id"])
         file["stream_url"] = f"{MY_DOMAIN}/player/{bot.encode_file_link(file['channel_id'], file['message_id'])}"
 
-    return {
+    data = {
         "files": files,
         "total_pages": (total_files + page_size - 1) // page_size,
         "current_page": page
     }
+    cache.set(cache_key, data)
+    return data
 
 @api.post("/api/comments")
 async def create_comment(request: Request, user_id: int = Depends(get_current_user)):
@@ -195,7 +215,7 @@ async def create_comment(request: Request, user_id: int = Depends(get_current_us
         "comment": comment_text,
         "created_at": datetime.now(timezone.utc)
     }
-    await comments_col.insert_one(comment)
+    comments_col.insert_one(comment)
     return {"message": "Comment added successfully"}
 
 @api.get("/api/comments")
@@ -204,12 +224,12 @@ async def get_comments(page: int = 1, user_id: int = Depends(get_current_user)):
     skip = (page - 1) * page_size
 
     comments = []
-    async for comment in comments_col.find().sort("_id", -1).skip(skip).limit(page_size):
+    for comment in comments_col.find().sort("_id", -1).skip(skip).limit(page_size):
         comment["_id"] = str(comment["_id"])
         comment["first_name"] = comment["user_name"]
         comments.append(comment)
 
-    total_comments = await comments_col.count_documents({})
+    total_comments = comments_col.count_documents({})
 
     return {
         "comments": comments,
@@ -237,3 +257,5 @@ async def stream_player(file_link: str, request: Request):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 '''
+
+
