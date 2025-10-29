@@ -1,6 +1,7 @@
 import re
 import asyncio
 import base64
+from cache import user_file_count
 from pyrogram import Client, enums
 from config import API_ID, API_HASH, BOT_TOKEN
 
