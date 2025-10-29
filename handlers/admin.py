@@ -116,7 +116,7 @@ async def add_tmdb_entry(data: dict, admin_id: int = Depends(get_current_admin))
         raise HTTPException(status_code=400, detail="Invalid TMDB ID")
 
     info = await get_info(tmdb_type, tmdb_id)
-    if not tmdb_info or "message" in tmdb_info and tmdb_info["message"].startswith("Error"):
+    if not info or "message" in info and info["message"].startswith("Error"):
         raise HTTPException(status_code=404, detail="TMDB ID not found")
         
     poster_path = info.get('poster_path')
