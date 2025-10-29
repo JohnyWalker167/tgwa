@@ -114,6 +114,8 @@ def build_search_pipeline(query, match_query, skip, limit):
             "message_id": 1,
             "channel_id": 1,
             "poster_url": 1,
+            "tmdb_id": 1,
+            "tmdb_type": 1,
             "score": {"$meta": "searchScore"}
         }
     }
