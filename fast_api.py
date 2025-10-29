@@ -127,7 +127,7 @@ async def get_movie_details(tmdb_id: str, tmdb_type: str, page: int = 1, user_id
     page_size = 10
     skip = (page - 1) * page_size
 
-    files = list(files_col.find({"tmdb_id": tmdb_id, "tmdb_type": tmdb_type}).skip(skip).limit(page_size))
+    files = list(files_col.find({"tmdb_id": tmdb_id, "tmdb_type": tmdb_type}).sort("file_name", 1).skip(skip).limit(page_size))
     total_files = files_col.count_documents({"tmdb_id": tmdb_id, "tmdb_type": tmdb_type})
 
     # Convert ObjectId to string and add stream URL
