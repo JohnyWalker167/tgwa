@@ -2,7 +2,6 @@ import re
 import asyncio
 import base64
 from pyrogram import Client, enums
-from redis_cache import user_file_count
 from config import API_ID, API_HASH, BOT_TOKEN
 
 class Bot(Client):
