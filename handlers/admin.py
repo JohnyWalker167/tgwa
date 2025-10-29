@@ -7,6 +7,7 @@ from config import OWNER_ID
 from tmdb import get_info
 from app import bot
 from bson.objectid import ObjectId
+from utility import upsert_tmdb_info
 import logging
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
