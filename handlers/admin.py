@@ -159,3 +159,8 @@ async def update_file_poster(file_id: str, data: dict, admin_id: int = Depends(g
     poster_url = data.get("poster_url")
     await files_col.update_one({"_id": ObjectId(file_id)}, {"$set": {"poster_url": poster_url}})
     return {"status": "success"}
+    
+@router.delete("/files/{file_id}")
+async def delete_file(file_id: str, admin_id: int = Depends(get_current_admin)):
+    await files_col.delete_one({"_id": ObjectId(file_id)})
+    return {"status": "success"}
