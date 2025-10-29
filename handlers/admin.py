@@ -128,7 +128,7 @@ async def add_tmdb_entry(data: dict, admin_id: int = Depends(get_current_admin))
     plot = info.get("plot")
     imdb_id = info.get("imdb_id")
     
-    upsert_tmdb_info(tmdb_id, tmdb_type, poster_path, name, year, rating, plot, trailer_url, imdb_id):
+    await upsert_tmdb_info(tmdb_id, tmdb_type, poster_path, name, year, rating, plot, trailer_url, imdb_id):
 
     if file_ids:
         for file_id in file_ids:
