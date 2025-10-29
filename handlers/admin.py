@@ -115,11 +115,20 @@ async def add_tmdb_entry(data: dict, admin_id: int = Depends(get_current_admin))
     except (ValueError, TypeError):
         raise HTTPException(status_code=400, detail="Invalid TMDB ID")
 
-    tmdb_info = await get_info(tmdb_type, tmdb_id)
+    info = await get_info(tmdb_type, tmdb_id)
     if not tmdb_info or "message" in tmdb_info and tmdb_info["message"].startswith("Error"):
         raise HTTPException(status_code=404, detail="TMDB ID not found")
-
-    await tmdb_col.update_one({"tmdb_id": tmdb_id, "tmdb_type": tmdb_type}, {"$set": tmdb_info}, upsert=True)
+        
+    poster_path = info.get('poster_path')
+    trailer_url = info.get('trailer_url')
+    message = info.get('message')
+    name = info.get('title')
+    year = info.get('year')
+    rating = info.get('rating')
+    plot = info.get("plot")
+    imdb_id = info.get("imdb_id")
+    
+    upsert_tmdb_info(tmdb_id, tmdb_type, poster_path, name, year, rating, plot, trailer_url, imdb_id):
 
     if file_ids:
         for file_id in file_ids:
