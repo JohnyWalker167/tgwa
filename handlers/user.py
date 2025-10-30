@@ -71,7 +71,7 @@ async def start_handler(client, message):
                         [[InlineKeyboardButton("🔔 Join Updates", url=f"https://t.me/{BACKUP_CHANNEL}"), 
                           InlineKeyboardButton("🕸️ WEB APP", url=f"https://t.me/{CF_DOMAIN}")
                          ]]
-                    )
+                    ))
                     
                 bot.loop.create_task(auto_delete_message(message, reply))
                 return
