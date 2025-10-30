@@ -184,7 +184,7 @@ async def authorize_user(user_id):
     expiry = datetime.now(timezone.utc) + timedelta(seconds=TOKEN_VALIDITY_SECONDS)
     await auth_users_col.update_one(
         {"user_id": user_id},
-        {"$set": {"expiry": expiry}},
+        {"$set": {"expiry": expiry, "file_count": 0}},
         upsert=True
     )
 

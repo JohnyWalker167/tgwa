@@ -1,13 +1,14 @@
 import re
 import base64
 import cache
+import logging
 from fastapi import FastAPI, Request, Depends, HTTPException, status, Header
 from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from config import MY_DOMAIN, CF_DOMAIN
+from config import MY_DOMAIN, CF_DOMAIN, MAX_FILES_PER_SESSION
 from utility import is_user_authorized, get_user_firstname, build_search_pipeline
-from db import tmdb_col, files_col, comments_col
+from db import tmdb_col, files_col, comments_col, auth_users_col
 from tmdb import POSTER_BASE_URL
 from app import bot
 from config import TMDB_CHANNEL_ID, OWNER_ID
@@ -54,6 +55,12 @@ async def get_current_user(authorization: str = Header(None)):
 @api.post("/api/send_file")
 async def send_file_to_user(request: SendFileRequest, user_id: int = Depends(get_current_user)):
     try:
+        user = await auth_users_col.find_one({"user_id": user_id})
+        file_count = user.get("file_count", 0) if user else 0
+
+        if file_count >= MAX_FILES_PER_SESSION:
+            raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=f"You have reached your daily limit of {MAX_FILES_PER_SESSION} files.")
+
         file = await files_col.find_one({"_id": ObjectId(request.file_id)})
         if not file:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
@@ -70,6 +77,13 @@ async def send_file_to_user(request: SendFileRequest, user_id: int = Depends(get
             message_id=message_id,
             protect_content=True
         )
+
+        await auth_users_col.update_one(
+            {"user_id": user_id},
+            {"$inc": {"file_count": 1}},
+            upsert=True
+        )
+
         return JSONResponse(content={"message": "File sent successfully"})
     except Exception as e:
         logging.error(f"Failed to send file to user {user_id}: {e}")
