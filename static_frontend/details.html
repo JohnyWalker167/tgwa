@@ -1,6 +1,6 @@
-
 <!doctype html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,6 +11,7 @@
             background-color: #141414;
             color: #fff;
         }
+
         .backdrop {
             position: fixed;
             top: 0;
@@ -22,6 +23,7 @@
             filter: blur(10px);
             z-index: -1;
         }
+
         .backdrop::before {
             content: '';
             position: absolute;
@@ -31,14 +33,17 @@
             height: 100%;
             background-color: rgba(0, 0, 0, 0.6);
         }
+
         .container {
             position: relative;
             z-index: 1;
         }
+
         .file-list {
             list-style: none;
             padding: 0;
         }
+
         .file-item {
             display: flex;
             flex-wrap: wrap;
@@ -50,13 +55,16 @@
             margin-bottom: -1px;
             transition: background-color 0.3s;
         }
+
         .file-item:hover {
             background-color: #333;
         }
+
         .file-item span {
             word-break: break-all;
             flex-grow: 1;
         }
+
         .file-item .btn {
             margin-top: 10px;
         }
@@ -65,40 +73,101 @@
             .file-item {
                 flex-wrap: nowrap;
             }
+
             .file-item .btn {
                 margin-top: 0;
                 margin-left: 10px;
             }
         }
+
         .details-container {
             text-align: center;
         }
+
         .logo-btn {
             margin: 0 10px;
             transition: transform 0.3s;
         }
+
         .logo-btn:hover {
             transform: scale(1.1);
         }
+
         .logo-btn img {
             width: 50px;
             height: auto;
         }
+
         .btn-primary {
             background-image: linear-gradient(to right, #e50914, #f40612);
             border: none;
         }
+
         .pagination .page-link {
             background-color: #222;
             border-color: #333;
             color: #fff;
         }
+
         .pagination .page-item.active .page-link {
             background-image: linear-gradient(to right, #e50914, #f40612);
             border: none;
         }
+
+        .modal {
+            position: fixed;
+            z-index: 1050;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-content {
+            background-color: #1f1f1f;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            border-radius: 10px;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #fff;
+        }
+
+        .modal-footer {
+            text-align: center;
+        }
+
+        .close-btn {
+            background-image: linear-gradient(to right, #e50914, #f40612);
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: transform 0.2s, background 0.3s;
+        }
+
+        .close-btn:hover {
+            transform: scale(1.05);
+            background-image: linear-gradient(to right, #f40612, #e50914);
+        }
     </style>
 </head>
+
 <body>
     <div class="backdrop"></div>
     <div class="container mt-4">
@@ -108,11 +177,26 @@
             <!-- Details will be rendered here by JavaScript -->
         </div>
 
-        <ul id="file-list" class="file-list mt-4"></ul>
+        <div class="text-center mt-4">
+            <button id="view-files-btn" class="btn btn-primary">View</button>
+        </div>
 
-        <nav aria-label="Page navigation">
-            <ul id="pagination" class="pagination justify-content-center mt-4"></ul>
-        </nav>
+        <div id="file-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Found results</h2>
+                </div>
+                <div class="modal-body">
+                    <ul id="file-list" class="file-list mt-4"></ul>
+                    <nav aria-label="Page navigation">
+                        <ul id="pagination" class="pagination justify-content-center mt-4"></ul>
+                    </nav>
+                </div>
+                <div class="modal-footer text-center mt-3">
+                    <button type="button" class="btn btn-danger close-btn" onclick="closeModal()">Close</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="config.js"></script>
@@ -145,9 +229,8 @@
                 const response = await fetchWithAuth(`${API_BASE_URL}/api/movies?tmdb_id=${tmdbId}&tmdb_type=${tmdbType}`);
                 if (response.ok) {
                     const data = await response.json();
-                    if(data.movies.length > 0) {
+                    if (data.movies.length > 0) {
                         renderDetails(data.movies[0]);
-                        fetchFiles(1);
                     }
                 } else {
                     console.error('Failed to fetch details');
@@ -242,7 +325,19 @@
             }
         }
 
+        function openModal() {
+            document.getElementById('file-modal').style.display = 'block';
+            fetchFiles(1);
+        }
+
+        function closeModal() {
+            document.getElementById('file-modal').style.display = 'none';
+        }
+
+        document.getElementById('view-files-btn').addEventListener('click', openModal);
+
         fetchAndRenderDetails();
     </script>
 </body>
+
 </html>

@@ -167,7 +167,7 @@
         <input type="text" id="tmdb-id" placeholder="TMDB ID">
         <select id="tmdb-type">
             <option value="movie">Movie</option>
-            <option value="series">Series</option>
+            <option value="tv">Series</option>
         </select>
         <button onclick="addTmdbEntry()">Add</button>
 
@@ -222,6 +222,7 @@
         let filesCurrentPage = 1;
         let tmdbSearchQuery = '';
         let fileSearchQuery = '';
+        const selectedFileIds = new Set();
 
         // 👇 Universal fetch helper
         async function fetchWithAuth(url, options = {}) {
@@ -245,6 +246,7 @@
                 return response;
             } catch (err) {
                 console.error('Request failed:', err);
+                throw err;
             } finally {
                 loader.style.display = 'none';
             }
@@ -275,8 +277,6 @@
 
                 // If valid, continue loading data
                 console.log("✅ Authorized successfully.");
-                loadTmdbEntries();
-                loadFiles();
             } catch (err) {
                 console.error('Authorization failed:', err);
                 window.location.href = 'login.html';
@@ -288,7 +288,7 @@
         // --------------------------
         async function loadTmdbEntries() {
             const response = await fetchWithAuth(`${API_BASE_URL}/api/admin/tmdb?page=${tmdbCurrentPage}&search=${tmdbSearchQuery}`);
-            if (!response.ok) return;
+            if (!response || !response.ok) return;
             const data = await response.json();
             const list = document.getElementById('tmdb-list');
             list.innerHTML = '';
@@ -313,18 +313,35 @@
 
         async function loadFiles(search = '') {
             const response = await fetchWithAuth(`${API_BASE_URL}/api/admin/files?page=${filesCurrentPage}&search=${search}`);
-            if (!response.ok) return;
+            if (!response || !response.ok) return;
             const data = await response.json();
             const list = document.getElementById('files-list');
             list.innerHTML = '';
             data.files.forEach(file => {
                 const item = document.createElement('li');
-                item.innerHTML = `<input type="checkbox" data-file-id="${file.id}"> ${file.file_name} (${file.tmdb_id || 'No TMDB ID'})`;
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.dataset.fileId = file.id;
+                checkbox.checked = selectedFileIds.has(file.id);
+                checkbox.onchange = () => {
+                    if (checkbox.checked) {
+                        selectedFileIds.add(file.id);
+                    } else {
+                        selectedFileIds.delete(file.id);
+                    }
+                };
+                item.appendChild(checkbox);
+                item.append(` ${file.file_name} (${file.tmdb_id || 'No TMDB ID'})`);
                 
                 const editPosterButton = document.createElement('button');
                 editPosterButton.textContent = 'Edit Poster';
                 editPosterButton.onclick = () => openPosterModal(file);
                 item.appendChild(editPosterButton);
+
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Delete';
+                deleteButton.onclick = () => deleteFile(file.id);
+                item.appendChild(deleteButton);
 
                 list.appendChild(item);
             });
@@ -335,17 +352,19 @@
         async function addTmdbEntry() {
             const tmdbId = document.getElementById('tmdb-id').value;
             const tmdbType = document.getElementById('tmdb-type').value;
-            const selectedFiles = Array.from(document.querySelectorAll('#files-list input:checked')).map(input => input.dataset.fileId);
+            const selectedFiles = Array.from(selectedFileIds);
 
             const response = await fetchWithAuth(`${API_BASE_URL}/api/admin/tmdb`, {
                 method: 'POST',
                 body: JSON.stringify({ tmdb_id: tmdbId, tmdb_type: tmdbType, file_ids: selectedFiles })
             });
 
-            if (response.ok) {
+            if (response && response.ok) {
                 showNotification('TMDB entry added successfully!');
+                document.getElementById('tmdb-id').value = '';
+                selectedFileIds.clear();
                 loadTmdbEntries();
-                loadFiles();
+                loadFiles(fileSearchQuery);
             } else {
                 showNotification('Failed to add TMDB entry.', true);
             }
@@ -353,7 +372,7 @@
 
         async function deleteTmdbEntry(tmdbId) {
             const response = await fetchWithAuth(`${API_BASE_URL}/api/admin/tmdb/${tmdbId}`, { method: 'DELETE' });
-            if (response.ok) {
+            if (response && response.ok) {
                 showNotification('TMDB entry deleted successfully!');
                 loadTmdbEntries();
                 loadFiles();
@@ -426,7 +445,7 @@
                 method: 'PUT',
                 body: JSON.stringify(data)
             });
-            if (response.ok) {
+            if (response && response.ok) {
                 showNotification('TMDB entry updated successfully!');
                 closeModal();
                 loadTmdbEntries();
@@ -465,12 +484,32 @@
                 method: 'PUT',
                 body: JSON.stringify({ poster_url: posterUrl })
             });
-            if (response.ok) {
+            if (response && response.ok) {
                 showNotification('File poster updated successfully!');
                 closePosterModal();
                 loadFiles(fileSearchQuery);
             } else {
                 showNotification('Failed to update file poster.', true);
+            }
+        }
+
+        async function deleteFile(fileId) {
+            if (!confirm('Are you sure you want to delete this file?')) {
+                return;
+            }
+            try {
+                const response = await fetchWithAuth(`${API_BASE_URL}/api/admin/files/${fileId}`, {
+                    method: 'DELETE'
+                });
+                if (response && response.ok) {
+                    showNotification('File deleted successfully!');
+                    loadFiles(fileSearchQuery);
+                } else {
+                    showNotification('Failed to delete file.', true);
+                }
+            } catch (error) {
+                console.error('Error deleting file:', error);
+                showNotification('An unexpected error occurred while deleting the file.', true);
             }
         }
     </script>
