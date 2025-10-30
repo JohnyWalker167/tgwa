@@ -29,7 +29,6 @@ from app import bot
 logger = logging.getLogger(__name__)
 
 @bot.on_message(filters.command("start") & filters.private)
-@bot.on_message(filters.command("start") & filters.private)
 async def start_handler(client, message):
     try:
         user_id = message.from_user.id
