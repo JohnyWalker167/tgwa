@@ -54,7 +54,7 @@ async def start_handler(client, message):
         if len(message.command) == 2 and message.command[1].startswith("token_"):
             if await is_token_valid(message.command[1][6:], user_id):
                 await authorize_user(user_id)
-                reply_msg = await safe_api_call(message.reply_text("Great! You're all set to get files. ✅"))
+                reply_msg = await safe_api_call(message.reply_text("Great! You're all set to login. ✅"))
                 await safe_api_call(bot.send_message(LOG_CHANNEL_ID, f"✅ User <b>{user_link} | <code>{user_id}</code></b> authorized via @{BOT_USERNAME}"))
             else:
                 reply_msg = await safe_api_call(message.reply_text("Oh no! It looks like your access key is invalid or has expired. Please get a new one. 🔑"))
