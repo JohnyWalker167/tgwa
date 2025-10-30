@@ -31,6 +31,26 @@ api.add_middleware(
 class SendFileRequest(BaseModel):
     file_id: str
 
+# Dependency to get user_id from Authorization header
+async def get_current_user(authorization: str = Header(None)):
+    if not authorization:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authorization header missing")
+
+    parts = authorization.split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authorization scheme")
+
+    token = parts[1]
+
+    try:
+        user_id = int(token)
+        if not await is_user_authorized(user_id):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authorization required — please verify through the bot first.")
+        return user_id
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token format")
+
+
 @api.post("/api/send_file")
 async def send_file_to_user(request: SendFileRequest, user_id: int = Depends(get_current_user)):
     try:
@@ -54,25 +74,6 @@ async def send_file_to_user(request: SendFileRequest, user_id: int = Depends(get
     except Exception as e:
         logging.error(f"Failed to send file to user {user_id}: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to send file")
-
-# Dependency to get user_id from Authorization header
-async def get_current_user(authorization: str = Header(None)):
-    if not authorization:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authorization header missing")
-
-    parts = authorization.split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid authorization scheme")
-
-    token = parts[1]
-
-    try:
-        user_id = int(token)
-        if not await is_user_authorized(user_id):
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authorization required — please verify through the bot first.")
-        return user_id
-    except (ValueError, TypeError):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token format")
 
 @api.get("/")
 async def root():
