@@ -2,12 +2,13 @@ import re
 from fastapi import APIRouter, Depends, HTTPException, Header, status
 from fastapi.responses import FileResponse
 from db import tmdb_col, files_col
-from utility import is_user_authorized, build_search_pipeline
-from config import OWNER_ID
+from utility import is_user_authorized, build_search_pipeline, safe_api_call
+from config import OWNER_ID, SEND_UPDATES, UPDATE_CHANNEL_ID
 from tmdb import get_info
 from app import bot
 from bson.objectid import ObjectId
-from utility import upsert_tmdb_info
+from pyrogram import enums
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 import logging
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -121,8 +122,9 @@ async def add_tmdb_entry(data: dict, admin_id: int = Depends(get_current_admin))
         raise HTTPException(status_code=404, detail="TMDB ID not found")
         
     poster_path = info.get('poster_path')
+    poster_url = info.get('poster_url')
     trailer_url = info.get('trailer_url')
-    message = info.get('message')
+    message_text = info.get('message')
     name = info.get('title')
     year = info.get('year')
     rating = info.get('rating')
@@ -130,6 +132,25 @@ async def add_tmdb_entry(data: dict, admin_id: int = Depends(get_current_admin))
     imdb_id = info.get("imdb_id")
     
     await upsert_tmdb_info(tmdb_id, tmdb_type, poster_path, name, year, rating, plot, trailer_url, imdb_id)
+
+    logger.info(f"SEND_UPDATES is {SEND_UPDATES}")
+    logger.info(f"Poster URL is {poster_url}")
+
+    if SEND_UPDATES and poster_url:
+        keyboard = InlineKeyboardMarkup(
+            [[InlineKeyboardButton("🎥 Trailer", url=trailer_url)]]
+        ) if trailer_url else None
+        
+        result = await safe_api_call(
+            bot.send_photo(
+                UPDATE_CHANNEL_ID,
+                photo=poster_url,
+                caption=message_text,
+                parse_mode=enums.ParseMode.HTML,
+                reply_markup=keyboard
+            )
+        )
+        logger.info(f"safe_api_call result: {result}")
 
     if file_ids:
         for file_id in file_ids:
