@@ -29,8 +29,8 @@ from app import bot
 logger = logging.getLogger(__name__)
 
 @bot.on_message(filters.command("start") & filters.private)
+@bot.on_message(filters.command("start") & filters.private)
 async def start_handler(client, message):
-    reply_msg = None
     try:
         user_id = message.from_user.id
         user_link = await get_user_link(message.from_user)
@@ -38,74 +38,84 @@ async def start_handler(client, message):
         username = message.from_user.username or None
         user_doc = await add_user(user_id)
 
-        if user_doc["_new"]:
-            log_msg = f"👤 New user added:\nID: <code>{user_id}</code>\n"
-            if first_name:
-                log_msg += f"First Name: <b>{first_name}</b>\n"
+        # Log new users
+        if user_doc.get("_new"):
+            log_msg = (
+                f"👤 New user added:\n"
+                f"ID: <code>{user_id}</code>\n"
+                f"First Name: <b>{first_name}</b>\n"
+            )
             if username:
                 log_msg += f"Username: @{username}\n"
             await safe_api_call(
                 bot.send_message(LOG_CHANNEL_ID, log_msg, parse_mode=enums.ParseMode.HTML)
             )
 
-        if user_doc.get("blocked", True):   
+        # Blocked users
+        if user_doc.get("blocked", False):
             return
 
+        # --- Handle token-based login ---
         if len(message.command) == 2 and message.command[1].startswith("token_"):
-            if await is_token_valid(message.command[1][6:], user_id):
+            token = message.command[1][6:]
+            if await is_token_valid(token, user_id):
                 await authorize_user(user_id)
-                reply_msg = await safe_api_call(message.reply_text("Great! You're all set to login. ✅"))
-                await safe_api_call(bot.send_message(LOG_CHANNEL_ID, f"✅ User <b>{user_link} | <code>{user_id}</code></b> authorized via @{BOT_USERNAME}"))
+                await safe_api_call(message.reply_text("✅ Great! You’re all set to log in."))
+                await safe_api_call(
+                    bot.send_message(LOG_CHANNEL_ID, f"✅ Authorized: {user_link} (<code>{user_id}</code>)")
+                )
             else:
-                reply_msg = await safe_api_call(message.reply_text("Oh no! It looks like your access key is invalid or has expired. Please get a new one. 🔑"))
-                await safe_api_call(bot.send_message(LOG_CHANNEL_ID, f"❌ User <b>{user_link} | <code>{user_id}</code></b> used invalid or expired token."))
-        else:
+                await safe_api_call(
+                    message.reply_text("❌ Invalid or expired access key. Please get a new one.")
+                )
+            return
 
-            if BACKUP_CHANNEL and not await is_user_subscribed(client, user_id):
-                reply = await safe_api_call(message.reply_text(
-                    text=(
-                        "To get started, please join our updates channel. "
-                        "It's the best way to stay in the loop! 😊"
-                    ), 
-                    reply_markup = InlineKeyboardMarkup(
-                        [[InlineKeyboardButton("🔔 Join Updates", url=f"https://t.me/{BACKUP_CHANNEL}")]]
-                    )
-                ))
-                    
-                bot.loop.create_task(auto_delete_message(message, reply))
-                return
-
-            
-            if not await is_user_authorized(user_id):
-                now = datetime.now(timezone.utc)
-                token_doc = await tokens_col.find_one({"user_id": user_id, "expiry": {"$gt": now}})
-                token_id = token_doc["token_id"] if token_doc else await generate_token(user_id)
-                short_link = await shorten_url(get_token_link(token_id, BOT_USERNAME))
-                
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🗝️ Verify", url=short_link), 
-                                                    InlineKeyboardButton("🕸️ WEB APP", url=f"{CF_DOMAIN}")                                          ]]
-                                                 )
-
-            joined_date = user_doc.get("joined", "Unknown")
-            joined_str = joined_date.strftime("%Y-%m-%d %H:%M") if isinstance(joined_date, datetime) else str(joined_date)
-
-            welcome_text = (
-                f"Hi <b>{first_name}</b>, welcome! 👋\n\n"
-                "I'm here to help you find what you're looking for.\n\n "
-                f"Your Login ID <code>{user_id}</code>\n\n"
-               f"👤 Joined: {joined_str}"
-            )
-            reply_msg = await safe_api_call(message.reply_text(
-                welcome_text,
-                quote=True,
-                reply_to_message_id=message.id,
-                reply_markup=reply_markup,
+        # --- Check subscription ---
+        if BACKUP_CHANNEL and not await is_user_subscribed(client, user_id):
+            reply = await safe_api_call(message.reply_text(
+                text="Please join our updates channel to continue 😊",
+                reply_markup=InlineKeyboardMarkup(
+                    [[InlineKeyboardButton("🔔 Join Updates", url=f"https://t.me/{BACKUP_CHANNEL}")]]
+                )
             ))
-    except Exception as e:
-        logger.error(f"⚠️ An unexpected error occurred in start_handler: {e}")
+            bot.loop.create_task(auto_delete_message(message, reply))
+            return
 
-    if reply_msg:
-        bot.loop.create_task(auto_delete_message(message, reply_msg))
+        # --- Authorized or new user ---
+        short_link = None
+        if not await is_user_authorized(user_id):
+            now = datetime.now(timezone.utc)
+            token_doc = await tokens_col.find_one({"user_id": user_id, "expiry": {"$gt": now}})
+            token_id = token_doc["token_id"] if token_doc else await generate_token(user_id)
+            short_link = await shorten_url(get_token_link(token_id, BOT_USERNAME))
+
+        # Buttons
+        buttons = []
+        if short_link:
+            buttons.append(InlineKeyboardButton("🗝️ Verify", url=short_link))
+        buttons.append(InlineKeyboardButton("🕸️ WEB APP", url=f"{CF_DOMAIN}"))
+
+        joined_date = user_doc.get("joined", "Unknown")
+        joined_str = joined_date.strftime("%Y-%m-%d %H:%M") if isinstance(joined_date, datetime) else str(joined_date)
+
+        welcome_text = (
+            f"Hi <b>{first_name}</b>, welcome! 👋\n\n"
+            "I'm here to help you find what you’re looking for.\n\n"
+            f"Your Login ID: <code>{user_id}</code>\n\n"
+            f"👤 Joined: {joined_str}"
+        )
+
+        reply_msg = await safe_api_call(message.reply_text(
+            welcome_text,
+            quote=True,
+            reply_markup=InlineKeyboardMarkup([buttons])
+        ))
+
+        if reply_msg:
+            bot.loop.create_task(auto_delete_message(message, reply_msg))
+
+    except Exception as e:
+        logger.error(f"⚠️ Error in start_handler: {e}")
 
 @bot.on_message(filters.channel & (filters.document | filters.video | filters.audio | filters.photo))
 async def channel_file_handler(client, message):
