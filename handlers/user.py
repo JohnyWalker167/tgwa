@@ -5,7 +5,7 @@ from pyrogram import filters, enums
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.errors import ChatAdminRequired, UserAlreadyParticipant
 
-from config import LOG_CHANNEL_ID, BOT_USERNAME, BACKUP_CHANNEL
+from config import LOG_CHANNEL_ID, BOT_USERNAME, BACKUP_CHANNEL, CF_DOMAIN
 from utility import (
     add_user,
     is_token_valid,
@@ -66,11 +66,13 @@ async def start_handler(client, message):
                     text=(
                         "To get started, please join our updates channel. "
                         "It's the best way to stay in the loop! 😊"
-                    ),
-                    reply_markup=InlineKeyboardMarkup(
-                        [[InlineKeyboardButton("🔔 Join Updates", url=f"https://t.me/{BACKUP_CHANNEL}")]]
+                    ), 
+                    reply_markup = InlineKeyboardMarkup(
+                        [[InlineKeyboardButton("🔔 Join Updates", url=f"https://t.me/{BACKUP_CHANNEL}"), 
+                          InlineKeyboardButton("🕸️ WEB APP", url=f"https://t.me/{CF_DOMAIN}")
+                         ]]
                     )
-                ))
+                    
                 bot.loop.create_task(auto_delete_message(message, reply))
                 return
 
