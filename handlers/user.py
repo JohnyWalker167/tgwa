@@ -82,7 +82,7 @@ async def start_handler(client, message):
                 token_id = token_doc["token_id"] if token_doc else await generate_token(user_id)
                 short_link = await shorten_url(get_token_link(token_id, BOT_USERNAME))
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🗝️ Verify", url=short_link), 
-                                                    InlineKeyboardButton("🕸️ WEB APP", url=f"https://t.me/{CF_DOMAIN}")
+                                                    InlineKeyboardButton("🕸️ WEB APP", url=f"{CF_DOMAIN}")
                                                    ]]
                                                  )
 
