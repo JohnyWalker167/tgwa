@@ -136,8 +136,6 @@ async def add_tmdb_entry(data: dict, admin_id: int = Depends(get_current_admin))
     if exists:
         await upsert_tmdb_info(tmdb_id, tmdb_type, poster_path, name, year, rating, plot, trailer_url, imdb_id)
 
-        logger.info(f"SEND_UPDATES is {SEND_UPDATES}")
-        logger.info(f"Poster URL is {poster_url}")
 
         if SEND_UPDATES and poster_url:
             keyboard = InlineKeyboardMarkup(
@@ -153,7 +151,6 @@ async def add_tmdb_entry(data: dict, admin_id: int = Depends(get_current_admin))
                     reply_markup=keyboard
                 )
             )
-            logger.info(f"safe_api_call result: {result}")
 
     if file_ids:
         for file_id in file_ids:
