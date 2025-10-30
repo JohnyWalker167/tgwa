@@ -36,6 +36,8 @@ async def start_handler(client, message):
         first_name = message.from_user.first_name or "there"
         username = message.from_user.username or None
         user_doc = await add_user(user_id)
+        joined_date = user_doc.get("joined", "Unknown")
+        joined_str = joined_date.strftime("%Y-%m-%d %H:%M") if isinstance(joined_date, datetime) else str(joined_date)
 
         # Log new users
         if user_doc.get("_new"):
@@ -59,7 +61,11 @@ async def start_handler(client, message):
             token = message.command[1][6:]
             if await is_token_valid(token, user_id):
                 await authorize_user(user_id)
-                await safe_api_call(message.reply_text("✅ Great! You’re all set to log in."))
+                await safe_api_call(message.reply_text(
+                    f"✅ Great, USER {USER_ID}! You’re all set to log in.\n"
+                    f"🌐 Visit our website here: <a href='{Website}'>Website 💻</a>"
+                ))
+
                 await safe_api_call(
                     bot.send_message(LOG_CHANNEL_ID, f"✅ Authorized: {user_link} (<code>{user_id}</code>)")
                 )
@@ -92,16 +98,12 @@ async def start_handler(client, message):
         buttons = []
         if short_link:
             buttons.append(InlineKeyboardButton("🗝️ Verify", url=short_link))
-        buttons.append(InlineKeyboardButton("🕸️ WEB APP", url=f"{CF_DOMAIN}"))
-
-        joined_date = user_doc.get("joined", "Unknown")
-        joined_str = joined_date.strftime("%Y-%m-%d %H:%M") if isinstance(joined_date, datetime) else str(joined_date)
 
         welcome_text = (
-            f"Hi <b>{first_name}</b>, welcome! 👋\n\n"
-            "I'm here to help you find what you’re looking for.\n\n"
-            f"Your Login ID: <code>{user_id}</code>\n\n"
-            f"👤 Joined: {joined_str}"
+            f"Hi <b>{first_name}</b>! 👋\n\n"
+            "Thanks for hopping in! 😄\n"
+            "We will reach out to you soon.\n"
+            "Sit tight — we’ll be in touch before you know it! 🚀"
         )
 
         reply_msg = await safe_api_call(message.reply_text(
