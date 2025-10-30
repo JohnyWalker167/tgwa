@@ -94,11 +94,11 @@ async def start_handler(client, message):
             token_doc = await tokens_col.find_one({"user_id": user_id, "expiry": {"$gt": now}})
             token_id = token_doc["token_id"] if token_doc else await generate_token(user_id)
             short_link = await shorten_url(get_token_link(token_id, BOT_USERNAME))
-
-        # Buttons
-        buttons = []
+        
         if short_link:
-            buttons.append(InlineKeyboardButton("🗝️ Verify", url=short_link))
+            reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🗝️ Verify", url=short_link)]])
+        else:
+            reply_markup = None             
 
         welcome_text = (
             f"Hi <b>{first_name}</b>! 👋\n\n"
@@ -110,7 +110,7 @@ async def start_handler(client, message):
         reply_msg = await safe_api_call(message.reply_text(
             welcome_text,
             quote=True,
-            reply_markup=InlineKeyboardMarkup([buttons])
+            reply_markup=reply_markup
         ))
 
         if reply_msg:
