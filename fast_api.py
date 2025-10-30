@@ -14,6 +14,7 @@ from config import TMDB_CHANNEL_ID, OWNER_ID
 from datetime import datetime, timezone
 from handlers.admin import router as admin_router
 from bson.objectid import ObjectId
+from pydantic import BaseModel
 
 api = FastAPI()
 
@@ -26,6 +27,33 @@ api.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+class SendFileRequest(BaseModel):
+    file_id: str
+
+@api.post("/api/send_file")
+async def send_file_to_user(request: SendFileRequest, user_id: int = Depends(get_current_user)):
+    try:
+        file = await files_col.find_one({"_id": ObjectId(request.file_id)})
+        if not file:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+
+        channel_id = file.get("channel_id")
+        message_id = file.get("message_id")
+
+        if not channel_id or not message_id:
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="File metadata is incomplete")
+
+        await bot.copy_message(
+            chat_id=user_id,
+            from_chat_id=channel_id,
+            message_id=message_id,
+            protect_content=True
+        )
+        return JSONResponse(content={"message": "File sent successfully"})
+    except Exception as e:
+        logging.error(f"Failed to send file to user {user_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to send file")
 
 # Dependency to get user_id from Authorization header
 async def get_current_user(authorization: str = Header(None)):
