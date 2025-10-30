@@ -27,7 +27,7 @@ if len(UPSTREAM_REPO) == 0:
 
 UPSTREAM_BRANCH = environ.get('UPSTREAM_BRANCH', '')
 if len(UPSTREAM_BRANCH) == 0:
-    UPSTREAM_BRANCH = 'feat-migrate-to-motor'
+    UPSTREAM_BRANCH = 'feat-file-limit'
 
 if ospath.exists('.git'):
     srun(["rm", "-rf", ".git"])
