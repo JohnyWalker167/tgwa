@@ -75,15 +75,15 @@ async def start_handler(client, message):
                 bot.loop.create_task(auto_delete_message(message, reply))
                 return
 
-            reply_markup = None
+            
             if not await is_user_authorized(user_id):
                 now = datetime.now(timezone.utc)
                 token_doc = await tokens_col.find_one({"user_id": user_id, "expiry": {"$gt": now}})
                 token_id = token_doc["token_id"] if token_doc else await generate_token(user_id)
                 short_link = await shorten_url(get_token_link(token_id, BOT_USERNAME))
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🗝️ Verify", url=short_link), 
-                                                    InlineKeyboardButton("🕸️ WEB APP", url=f"{CF_DOMAIN}")
-                                                   ]]
+                
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🗝️ Verify", url=short_link), 
+                                                    InlineKeyboardButton("🕸️ WEB APP", url=f"{CF_DOMAIN}")                                          ]]
                                                  )
 
             joined_date = user_doc.get("joined", "Unknown")
