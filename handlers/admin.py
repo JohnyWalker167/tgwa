@@ -130,27 +130,30 @@ async def add_tmdb_entry(data: dict, admin_id: int = Depends(get_current_admin))
     rating = info.get('rating')
     plot = info.get("plot")
     imdb_id = info.get("imdb_id")
-    
-    await upsert_tmdb_info(tmdb_id, tmdb_type, poster_path, name, year, rating, plot, trailer_url, imdb_id)
 
-    logger.info(f"SEND_UPDATES is {SEND_UPDATES}")
-    logger.info(f"Poster URL is {poster_url}")
+    exists = await tmdb_col.find_one({"tmdb_id": tmdb_id, "tmdb_type": tmdb_type})
 
-    if SEND_UPDATES and poster_url:
-        keyboard = InlineKeyboardMarkup(
-            [[InlineKeyboardButton("🎥 Trailer", url=trailer_url)]]
-        ) if trailer_url else None
-        
-        result = await safe_api_call(
-            bot.send_photo(
-                UPDATE_CHANNEL_ID,
-                photo=poster_url,
-                caption=message_text,
-                parse_mode=enums.ParseMode.HTML,
-                reply_markup=keyboard
+    if exists:
+        await upsert_tmdb_info(tmdb_id, tmdb_type, poster_path, name, year, rating, plot, trailer_url, imdb_id)
+
+        logger.info(f"SEND_UPDATES is {SEND_UPDATES}")
+        logger.info(f"Poster URL is {poster_url}")
+
+        if SEND_UPDATES and poster_url:
+            keyboard = InlineKeyboardMarkup(
+                [[InlineKeyboardButton("🎥 Trailer", url=trailer_url)]]
+            ) if trailer_url else None
+            
+            result = await safe_api_call(
+                bot.send_photo(
+                    UPDATE_CHANNEL_ID,
+                    photo=poster_url,
+                    caption=message_text,
+                    parse_mode=enums.ParseMode.HTML,
+                    reply_markup=keyboard
+                )
             )
-        )
-        logger.info(f"safe_api_call result: {result}")
+            logger.info(f"safe_api_call result: {result}")
 
     if file_ids:
         for file_id in file_ids:
