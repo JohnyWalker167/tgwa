@@ -68,10 +68,9 @@ async def start_handler(client, message):
                         "It's the best way to stay in the loop! 😊"
                     ), 
                     reply_markup = InlineKeyboardMarkup(
-                        [[InlineKeyboardButton("🔔 Join Updates", url=f"https://t.me/{BACKUP_CHANNEL}"), 
-                          InlineKeyboardButton("🕸️ WEB APP", url=f"https://t.me/{CF_DOMAIN}")
-                         ]]
-                    ))
+                        [[InlineKeyboardButton("🔔 Join Updates", url=f"https://t.me/{BACKUP_CHANNEL}")]]
+                    )
+                ))
                     
                 bot.loop.create_task(auto_delete_message(message, reply))
                 return
@@ -82,7 +81,10 @@ async def start_handler(client, message):
                 token_doc = await tokens_col.find_one({"user_id": user_id, "expiry": {"$gt": now}})
                 token_id = token_doc["token_id"] if token_doc else await generate_token(user_id)
                 short_link = await shorten_url(get_token_link(token_id, BOT_USERNAME))
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🗝️ Verify", url=short_link)]])
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🗝️ Verify", url=short_link), 
+                                                    InlineKeyboardButton("🕸️ WEB APP", url=f"https://t.me/{CF_DOMAIN}")
+                                                   ]]
+                                                 )
 
             joined_date = user_doc.get("joined", "Unknown")
             joined_str = joined_date.strftime("%Y-%m-%d %H:%M") if isinstance(joined_date, datetime) else str(joined_date)
