@@ -62,9 +62,9 @@ async def start_handler(client, message):
             if await is_token_valid(token, user_id):
                 await authorize_user(user_id)
                 await safe_api_call(message.reply_text(
-                    f"✅ Great, USER <code>{user_id}</code>! (Joined: {joined_str})\n"
-                    f"You’re all set to log in.\n"
-                    f"🌐 Visit our website here: <a href='{CF_DOMAIN}'>Website 💻</a>"
+                    f"✅ Authorised\nLogin ID:<code>{user_id}</code>\n"
+                    f"Joined: {joined_str}\n"
+                    f"🌐 Web App: {CF_DOMAIN}"
                 ))
 
                 await safe_api_call(
