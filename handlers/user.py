@@ -64,7 +64,7 @@ async def start_handler(client, message):
                 await safe_api_call(message.reply_text(
                     f"✅ Great, USER <code>{user_id}</code>! (Joined: {joined_str})\n"
                     f"You’re all set to log in.\n"
-                    f"🌐 Visit our website here: <a href='{Website}'>Website 💻</a>"
+                    f"🌐 Visit our website here: <a href='{CF_DOMAIN}'>Website 💻</a>"
                 ))
 
                 await safe_api_call(
