@@ -373,7 +373,7 @@ async def broadcast_handler(client, message: Message):
         removed_count = 0
         broadcasting = True
 
-        status_message = await message.reply_text(
+        status_message = await safe_api_call(message.reply_text(
             f"📢 Broadcast in progress...\n\n"
             f"👥 Total Users: {total_users}\n"
             f"✅ Sent: {sent_count}\n"
@@ -382,7 +382,7 @@ async def broadcast_handler(client, message: Message):
             reply_markup=InlineKeyboardMarkup(
                 [[InlineKeyboardButton("Cancel", callback_data="cancel_broadcast")]]
             )
-        )
+        ))
 
         for i, user in enumerate(users):
             if not broadcasting:
@@ -406,7 +406,7 @@ async def broadcast_handler(client, message: Message):
                 logger.error(f"Error broadcasting to {user['user_id']}: {e}")
 
             if i % 10 == 0:
-                await status_message.edit_text(
+                await safe_api_call(status_message.edit_text(
                     f"📢 Broadcast in progress...\n\n"
                     f"👥 Total Users: {total_users}\n"
                     f"✅ Sent: {sent_count}\n"
@@ -415,7 +415,7 @@ async def broadcast_handler(client, message: Message):
                     reply_markup=InlineKeyboardMarkup(
                         [[InlineKeyboardButton("Cancel", callback_data="cancel_broadcast")]]
                     )
-                )
+                ))
         else:
             await status_message.edit_text(
                 f"✅ Broadcast finished!**\n\n"
