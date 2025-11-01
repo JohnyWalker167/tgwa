@@ -165,10 +165,72 @@
             transform: scale(1.05);
             background-image: linear-gradient(to right, #f40612, #e50914);
         }
+
+        /* ---------- Loader ---------- */
+        .loader-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #e50914;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .logo-btn {
+            margin: 0 10px;
+            transition: transform 0.3s;
+            display: inline-block;
+            /* keeps them inline & centered */
+            vertical-align: middle;
+        }
+
+        .logo-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .logo-btn img {
+            width: 50px;
+            height: auto;
+            display: inline-block;
+            /* restore inline alignment */
+            vertical-align: middle;
+        }
+
+        /* remove blue line on click/focus */
+        .logo-btn:focus,
+        .logo-btn:active,
+        .logo-btn img:focus,
+        .logo-btn img:active {
+            outline: none;
+            box-shadow: none;
+        }
     </style>
 </head>
 
 <body>
+    <div id="loader" class="loader-container">
+        <div class="loader"></div>
+    </div>
     <div class="backdrop"></div>
     <div class="container mt-4">
         <a href="index.html" class="btn btn-primary mb-4">Back to Library</a>
@@ -201,6 +263,7 @@
 
     <script src="config.js"></script>
     <script>
+        const loader = document.getElementById('loader');
         const token = localStorage.getItem('authToken');
         if (!token) {
             window.location.href = 'login.html';
@@ -212,20 +275,23 @@
         const tmdbType = urlParams.get('tmdb_type');
 
         async function fetchWithAuth(url, options = {}) {
-            const response = await fetch(url, { ...options, headers: { ...options.headers, ...authHeader } });
-            if (response.status === 401) {
-                localStorage.removeItem('authToken');
-                window.location.href = 'login.html';
+            loader.style.display = 'flex';
+            try {
+                const response = await fetch(url, { ...options, headers: { ...options.headers, ...authHeader } });
+                if (response.status === 401) {
+                    localStorage.removeItem('authToken');
+                    window.location.href = 'login.html';
+                }
+                return response;
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            } finally {
+                loader.style.display = 'none';
             }
-            return response;
         }
 
         async function fetchAndRenderDetails() {
             try {
-                // This assumes you have an endpoint that returns the details of a single movie/show.
-                // The current backend doesn't have this, so I will add it in the finalization step.
-                // For now, I'll use the existing /api/movies endpoint and filter the results.
-
                 const response = await fetchWithAuth(`${API_BASE_URL}/api/movies?tmdb_id=${tmdbId}&tmdb_type=${tmdbType}`);
                 if (response.ok) {
                     const data = await response.json();
@@ -246,28 +312,28 @@
             backdrop.style.backgroundImage = `url('${POSTER_BASE_URL}${details.poster_path}')`;
 
             detailsContainer.innerHTML = `
-                <div class="row">
-                    <div class="col-md-4">
-                        <img src="${POSTER_BASE_URL}${details.poster_path}" class="img-fluid">
-                    </div>
-                    <div class="col-md-8">
-                        <h1>${details.title}</h1>
-                        <p><b>Year:</b> ${details.year}</p>
-                        <p><b>Rating:</b> ⭐ ${details.rating ?? 'N/A'}${details.rating ? '/10' : ''}</p>
-                        <p>${details.plot}</p>
-                        ${details.trailer_url ? `
-                            <a href="${details.trailer_url}" class="logo-btn" target="_blank">
-                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/YouTube_full-color_icon_%282017%29.svg/100px-YouTube_full-color_icon_%282017%29.svg.png" alt="Trailer">
-                            </a>
-                        ` : ''}
-                        ${details.imdb_id ? `
-                            <a href="https://www.imdb.com/title/${details.imdb_id}" class="logo-btn" target="_blank">
-                                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/IMDB_Logo_2016.svg/100px-IMDB_Logo_2016.svg.png" alt="IMDb">
-                            </a>
-                        ` : ''}
-                    </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <img src="${POSTER_BASE_URL}${details.poster_path}" class="img-fluid">
                 </div>
-            `;
+                <div class="col-md-8">
+                    <h1>${details.title}</h1>
+                    <p><b>Year:</b> ${details.year}</p>
+                    <p><b>Rating:</b> ⭐ ${details.rating ?? 'N/A'}${details.rating ? '/10' : ''}</p>
+                    <p>${details.plot}</p>
+                    ${details.trailer_url ? `
+                        <a href="${details.trailer_url}" class="logo-btn" target="_blank">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/YouTube_full-color_icon_%282017%29.svg/100px-YouTube_full-color_icon_%282017%29.svg.png" alt="Trailer">
+                        </a>
+                    ` : ''}
+                    ${details.imdb_id ? `
+                        <a href="https://www.imdb.com/title/${details.imdb_id}" class="logo-btn" target="_blank">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/6/69/IMDB_Logo_2016.svg" alt="IMDb">
+                        </a>
+                    ` : ''}
+                </div>
+            </div>
+        `;
         }
 
         async function fetchFiles(page = 1) {
@@ -277,6 +343,13 @@
                     const data = await response.json();
                     displayFiles(data.files);
                     setupPagination(data.total_pages, data.current_page);
+                    document.querySelector('.modal-body').scrollTop = 0;
+
+                    // Move focus to first file item after loading results
+                    setTimeout(() => {
+                        const firstItem = document.querySelector('#file-list .file-item');
+                        if (firstItem) firstItem.focus();
+                    }, 100);
                 } else {
                     console.error('Failed to fetch files');
                 }
@@ -291,12 +364,42 @@
             files.forEach(file => {
                 const item = document.createElement('li');
                 item.className = 'file-item';
+                item.tabIndex = 0; // make focusable
                 item.innerHTML = `
-                    <span>${file.file_name}</span>
+                <span>${file.file_name}</span>
+                <div>
                     <a href="${file.stream_url}" class="btn btn-success">Play</a>
-                `;
+                    <button class="btn btn-primary" onclick="sendFile('${file._id}', this)">Send</button>
+                </div>
+            `;
                 fileList.appendChild(item);
             });
+        }
+
+        async function sendFile(fileId, button) {
+            try {
+                const response = await fetchWithAuth(`${API_BASE_URL}/api/send_file`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_id: fileId })
+                });
+
+                if (response.ok) {
+                    button.textContent = 'Sent!';
+                    button.disabled = true;
+                    button.classList.remove('btn-primary');
+                    button.classList.add('btn-secondary');
+                } else if (response.status === 429) {
+                    alert('Your Limit Has Exceeded. Try again later');
+                    button.disabled = true;
+                } else {
+                    console.error('Failed to send file');
+                    alert('Failed to send file. Please try again.');
+                }
+            } catch (error) {
+                console.error('Error sending file:', error);
+                alert('An error occurred. Please try again.');
+            }
         }
 
         function setupPagination(totalPages, currentPage) {
@@ -326,11 +429,15 @@
         }
 
         function openModal() {
-            document.getElementById('file-modal').style.display = 'block';
+            document.body.style.overflow = 'hidden'; // prevent background scroll
+            const modal = document.getElementById('file-modal');
+            modal.style.display = 'block';
+            modal.focus(); // focus modal
             fetchFiles(1);
         }
 
         function closeModal() {
+            document.body.style.overflow = ''; // restore scroll
             document.getElementById('file-modal').style.display = 'none';
         }
 
