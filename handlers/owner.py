@@ -59,7 +59,7 @@ async def del_file_handler(client, message):
             
             ]
             reply_markup = InlineKeyboardMarkup(buttons)
-            await message.reply_text("Here's your link 👇", reply_markup)
+            await message.reply_text(text="Here's your link 👇", reply_markup=reply_markup)
             
         if reply:
             bot.loop.create_task(auto_delete_message(message, reply))
