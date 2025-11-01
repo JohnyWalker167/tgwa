@@ -52,6 +52,8 @@ async def get_current_user(authorization: str = Header(None)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token format")
 
 
+from fastapi import HTTPException
+
 @api.post("/api/send_file")
 async def send_file_to_user(request: SendFileRequest, user_id: int = Depends(get_current_user)):
     try:
@@ -59,7 +61,11 @@ async def send_file_to_user(request: SendFileRequest, user_id: int = Depends(get
         file_count = user.get("file_count", 0) if user else 0
 
         if file_count >= MAX_FILES_PER_SESSION:
-            raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=f"You have reached your daily limit of {MAX_FILES_PER_SESSION} files.")
+            # ✅ Raise proper 429 without getting caught later
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=f"You have reached your daily limit of {MAX_FILES_PER_SESSION} files."
+            )
 
         file = await files_col.find_one({"_id": ObjectId(request.file_id)})
         if not file:
@@ -85,6 +91,10 @@ async def send_file_to_user(request: SendFileRequest, user_id: int = Depends(get
         )
 
         return JSONResponse(content={"message": "File sent successfully"})
+
+    except HTTPException:
+        raise  # ✅ re-raise so FastAPI preserves correct status code
+
     except Exception as e:
         logging.error(f"Failed to send file to user {user_id}: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to send file")
