@@ -51,9 +51,6 @@ async def get_current_user(authorization: str = Header(None)):
     except (ValueError, TypeError):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token format")
 
-
-from fastapi import HTTPException
-
 @api.post("/api/send_file")
 async def send_file_to_user(request: SendFileRequest, user_id: int = Depends(get_current_user)):
     try:
