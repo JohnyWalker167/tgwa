@@ -62,7 +62,7 @@ TOKEN_VALIDITY_SECONDS = 24 * 60 * 60  # 24 hours
 MONGO_URI = os.getenv("MONGO_URI")
 
 TMDB_API_KEY = os.getenv('TMDB_API_KEY')
-IMGBB_API_KEY = os.getenv('TMDB_API_KEY')
+IMGBB_API_KEY = os.getenv('IMGBB_API_KEY')
 
 
 #SHORTERNER API
