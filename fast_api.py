@@ -141,6 +141,7 @@ async def get_movies(page: int = 1, search: str = None, category: str = None, so
 
     query = {}
     if search:
+        search = search.strip().lower()
         query["title"] = {"$regex": re.escape(search), "$options": "i"}
     if category:
         query["tmdb_type"] = category
