@@ -2,7 +2,7 @@ import re
 from fastapi import APIRouter, Depends, HTTPException, Header, status
 from fastapi.responses import FileResponse
 from db import tmdb_col, files_col
-from utility import is_user_authorized, build_search_pipeline, safe_api_call, upsert_tmdb_info
+from utility import is_user_authorized, build_search_pipeline, safe_api_call, upsert_tmdb_info, upload_to_imgbb
 from config import OWNER_ID, SEND_UPDATES, UPDATE_CHANNEL_ID
 from tmdb import get_info
 from app import bot
