@@ -198,7 +198,7 @@ async def update_file_poster(file_id: str, data: dict, admin_id: int = Depends(g
     poster_url = data.get("poster_url")
     try:
         imgbb_url = await upload_to_imgbb(poster_url)
-        await files_col.update_one({"_id": ObjectId(file_id)}, {"$set": {"poster_url": poster_url}})
+        await files_col.update_one({"_id": ObjectId(file_id)}, {"$set": {"poster_url": imgbb_url}})
         return {"status": "success"}
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e))
