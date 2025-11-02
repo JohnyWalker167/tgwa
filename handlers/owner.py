@@ -26,7 +26,6 @@ from utility import (
     upsert_tmdb_info
 )
 from app import bot
-from cache import invalidate_cache
 
 logger = logging.getLogger(__name__)
 
@@ -151,7 +150,6 @@ async def copy_file_handler(client, message):
             f"❌ <b>Failed to copy:</b> {failed}\n"
             f"📂 <i>Total messages checked:</i> {total}"
         ))
-        invalidate_cache()
     except Exception as e:
         logger.error(f"[copy_file_handler] Error: {e}")
         await message.reply_text("❌ <b>An error occurred during the copy process.</b>")
