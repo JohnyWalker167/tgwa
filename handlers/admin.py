@@ -6,6 +6,7 @@ from utility import is_user_authorized, build_search_pipeline, safe_api_call, up
 from config import OWNER_ID, SEND_UPDATES, UPDATE_CHANNEL_ID
 from tmdb import get_info
 from app import bot
+from cache import invalidate_cache
 from bson.objectid import ObjectId
 from pyrogram import enums
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -155,13 +156,14 @@ async def add_tmdb_entry(data: dict, admin_id: int = Depends(get_current_admin))
     if file_ids:
         for file_id in file_ids:
             await files_col.update_one({"_id": ObjectId(file_id)}, {"$set": {"tmdb_id": tmdb_id, "tmdb_type": tmdb_type}})
-
+    invalidate_cache()
     return {"status": "success"}
 
 @router.delete("/tmdb/{tmdb_id}")
 async def delete_tmdb_entry(tmdb_id: int, admin_id: int = Depends(get_current_admin)):
     await tmdb_col.delete_one({"tmdb_id": tmdb_id})
     await files_col.update_many({"tmdb_id": tmdb_id}, {"$unset": {"tmdb_id": "", "tmdb_type": ""}})
+    invalidate_cache()
     return {"status": "success"}
 
 @router.put("/tmdb/{tmdb_id}")
@@ -191,6 +193,7 @@ async def update_tmdb_entry(tmdb_id: int, data: dict, admin_id: int = Depends(ge
         "year": year
     }
     await tmdb_col.update_one({"tmdb_id": tmdb_id}, {"$set": update_data})
+    invalidate_cache()
     return {"status": "success"}
 
 @router.put("/files/{file_id}")
@@ -199,6 +202,7 @@ async def update_file_poster(file_id: str, data: dict, admin_id: int = Depends(g
     try:
         imgbb_url = await upload_to_imgbb(poster_url)
         await files_col.update_one({"_id": ObjectId(file_id)}, {"$set": {"poster_url": imgbb_url}})
+        invalidate_cache()
         return {"status": "success"}
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -206,4 +210,5 @@ async def update_file_poster(file_id: str, data: dict, admin_id: int = Depends(g
 @router.delete("/files/{file_id}")
 async def delete_file(file_id: str, admin_id: int = Depends(get_current_admin)):
     await files_col.delete_one({"_id": ObjectId(file_id)})
+    invalidate_cache()
     return {"status": "success"}

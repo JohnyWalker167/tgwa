@@ -19,6 +19,23 @@
         @media (max-width: 600px) {
             .movie-grid {
                 grid-template-columns: repeat(2, 1fr);
+                gap: 0.5rem;
+            }
+            .movie-tile {
+                border-radius: 5px;
+            }
+            #welcome-message {
+                font-size: 1.5rem;
+            }
+            #search-input {
+                width: 100% !important;
+            }
+            .d-flex.justify-content-between {
+                flex-direction: column;
+                align-items: stretch !important;
+            }
+            .d-flex.justify-content-between > * {
+                margin-bottom: 0.5rem;
             }
         }
         .movie-tile {

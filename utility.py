@@ -30,6 +30,7 @@ from mutagen.flac import FLAC
 from mutagen.mp4 import MP4
 from mutagen.id3 import ID3, APIC
 from mutagen import File as MutagenFile
+from cache import cache
 
 
 async def upload_to_imgbb(image_url):
@@ -77,42 +78,7 @@ async def upload_to_imgbb(image_url):
 TOKEN_VALIDITY_SECONDS = 24 * 60 * 60  # 24 hours
 AUTO_DELETE_SECONDS = 2 * 60
 
-# Simple in-memory cache: {(q, channel_id): (timestamp, results)}
-search_api_cache = {}
-CACHE_TTL = 300  # 5 minutes
-
 logger = logging.getLogger(__name__)
-
-def get_cache_key(q, channel_id):
-    return (q.strip().lower(), channel_id)
-
-# CACHE FOR SEARCH RESULTS
-search_cache = {}
-SEARCH_CACHE_TTL = 300  # seconds (5 minutes)
-
-def make_search_cache_key(query, page, channel_id=None):
-    return (query.lower(), page, channel_id)
-
-def get_cached_search(query, page, channel_id=None):
-    key = make_search_cache_key(query, page, channel_id)
-    entry = search_cache.get(key)
-    if entry and (time.time() - entry['time'] < SEARCH_CACHE_TTL):
-        return entry['files'], entry['total_files']
-    if entry:
-        del search_cache[key]
-    return None, None
-
-def set_cached_search(query, page, channel_id, files, total_files):
-    key = make_search_cache_key(query, page, channel_id)
-    search_cache[key] = {
-        'files': files,
-        'total_files': total_files,
-        'time': time.time()
-    }
-
-def invalidate_search_cache():
-    search_cache.clear()
-    search_api_cache.clear()
 
 def build_search_pipeline(query, match_query, skip, limit):
     # Split the query string into words

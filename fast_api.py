@@ -1,6 +1,6 @@
 import re
 import base64
-import cache
+from cache import cache
 import logging
 from fastapi import FastAPI, Request, Depends, HTTPException, status, Header
 from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
@@ -170,7 +170,7 @@ async def get_movies(page: int = 1, search: str = None, category: str = None, so
         "total_pages": (total_movies + page_size - 1) // page_size,
         "current_page": page
     }
-    cache.set(cache_key, data)
+    cache[cache_key] = data
     return data
 
 @api.get("/api/details/{tmdb_id}")
@@ -207,7 +207,7 @@ async def get_movie_details(tmdb_id: str, tmdb_type: str, page: int = 1, user_id
         "total_pages": (total_files + page_size - 1) // page_size,
         "current_page": page
     }
-    cache.set(cache_key, data)
+    cache[cache_key] = data
     return data
 
 @api.get("/api/file/{file_id}")
@@ -255,7 +255,7 @@ async def get_others(page: int = 1, search: str = None, sort: str = "recent", us
         "total_pages": (total_files + page_size - 1) // page_size,
         "current_page": page
     }
-    cache.set(cache_key, data)
+    cache[cache_key] = data
     return data
 
 @api.post("/api/comments")
