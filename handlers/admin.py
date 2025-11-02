@@ -196,8 +196,12 @@ async def update_tmdb_entry(tmdb_id: int, data: dict, admin_id: int = Depends(ge
 @router.put("/files/{file_id}")
 async def update_file_poster(file_id: str, data: dict, admin_id: int = Depends(get_current_admin)):
     poster_url = data.get("poster_url")
-    await files_col.update_one({"_id": ObjectId(file_id)}, {"$set": {"poster_url": poster_url}})
-    return {"status": "success"}
+    try:
+        imgbb_url = await upload_to_imgbb(poster_url)
+        await files_col.update_one({"_id": ObjectId(file_id)}, {"$set": {"poster_url": poster_url}})
+        return {"status": "success"}
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e))
     
 @router.delete("/files/{file_id}")
 async def delete_file(file_id: str, admin_id: int = Depends(get_current_admin)):

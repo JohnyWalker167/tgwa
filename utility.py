@@ -8,6 +8,7 @@ import time
 import PTN
 import os
 import logging
+import imgbbpy
 from datetime import datetime, timezone, timedelta
 from pyrogram.errors import (FloodWait, UserNotParticipant, UserIsBlocked,
                               InputUserDeactivated, PeerIdInvalid, UserIsBot, 
@@ -232,6 +233,21 @@ async def get_user_firstname(user_id: int) -> str:
     except Exception as e:
         logger.error(f"Error getting user's first name: {e}")
         return "Anonymous"
+
+async def upload_to_imgbb(image_url):
+    """
+    Uploads an image to imgbb and returns the new URL.
+    """
+    if not image_url:
+        return None
+    try:
+        client = imgbbpy.AsyncClient(IMGBB_API_KEY)
+        image = await client.upload(url=image_url)
+        return image.url
+    except Exception as e:
+        logger.error(f"Error uploading to imgbb: {e}")
+        raise ValueError(f"Failed to upload image to imgbb: {e}")
+
     
 # =========================
 # Token Utilities
