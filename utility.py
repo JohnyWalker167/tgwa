@@ -30,7 +30,7 @@ from mutagen.flac import FLAC
 from mutagen.mp4 import MP4
 from mutagen.id3 import ID3, APIC
 from mutagen import File as MutagenFile
-from cache import invalidate_cache
+from cache import cache
 
 
 async def upload_to_imgbb(image_url):
@@ -631,7 +631,6 @@ async def file_queue_worker(bot):
             logger.error(f"❌ Error saving file: {e}")
         finally:
             file_queue.task_done()
-            invalidate_cache()
 
 # =========================
 # Unified File Queueing

@@ -1,14 +1,14 @@
 import re
 import asyncio
 import base64
-from cache import user_file_count
+from cache import cache
 from pyrogram import Client, enums
 from config import API_ID, API_HASH, BOT_TOKEN
 
 class Bot(Client):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.user_file_count = user_file_count
+        self.cache = cache
         self.copy_lock = asyncio.Lock()
         self.SEARCH_PAGE_SIZE = 10
         self.MAX_FILES_PER_SESSION = 10

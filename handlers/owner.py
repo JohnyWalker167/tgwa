@@ -16,7 +16,6 @@ from utility import (
     get_allowed_channels,
     queue_file_for_processing,
     get_queue_size,
-    invalidate_search_cache,
     auto_delete_message,
     safe_api_call,
     remove_unwanted,
@@ -27,6 +26,7 @@ from utility import (
     upsert_tmdb_info
 )
 from app import bot
+from cache import invalidate_cache
 
 logger = logging.getLogger(__name__)
 
@@ -151,7 +151,7 @@ async def copy_file_handler(client, message):
             f"❌ <b>Failed to copy:</b> {failed}\n"
             f"📂 <i>Total messages checked:</i> {total}"
         ))
-        invalidate_search_cache()
+        invalidate_cache()
     except Exception as e:
         logger.error(f"[copy_file_handler] Error: {e}")
         await message.reply_text("❌ <b>An error occurred during the copy process.</b>")
@@ -170,7 +170,7 @@ async def watch_queue(reply, total_files):
     if last_message != final_message:
         await safe_api_call(reply.edit_text(final_message))
         
-    invalidate_search_cache()
+    invalidate_cache()
 
 @bot.on_message(filters.command("index") & filters.private & filters.user(OWNER_ID))
 async def index_channel_files(client, message):

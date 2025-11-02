@@ -128,6 +128,10 @@
                 transform: rotate(360deg);
             }
         }
+        .btn-red {
+            background-color: #e50914;
+            color: #fff;
+        }
     </style>
 </head>
 <body>
@@ -137,7 +141,7 @@
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 id="welcome-message">Welcome!</h1>
-            <a href="others.html" class="btn btn-primary">Others</a>
+            <a href="others.html" class="btn btn-red">Others</a>
             <input id="search-input" class="form-control w-50 ms-2" type="search" placeholder="Search" aria-label="Search">
         </div>
 
@@ -159,6 +163,11 @@
         <nav aria-label="Page navigation">
             <ul id="pagination" class="pagination justify-content-center mt-4"></ul>
         </nav>
+
+        <div class="d-flex justify-content-center mt-2">
+            <input type="number" id="page-input" class="form-control" style="width: 100px;" placeholder="Page">
+            <button id="goto-page" class="btn btn-primary ms-2">Go</button>
+        </div>
 
         <hr class="my-5">
 
@@ -190,10 +199,13 @@
         const submitCommentBtn = document.getElementById('submit-comment');
         const categoryButtons = document.getElementById('category-buttons');
         const sortButtons = document.getElementById('sort-buttons');
+        const pageInput = document.getElementById('page-input');
+        const gotoPageBtn = document.getElementById('goto-page');
 
         let currentCategory = 'movie';
         let currentSort = 'year';
         let currentSearch = '';
+        let totalPages = 1;
 
         async function fetchWithAuth(url, options = {}) {
             loader.style.display = 'flex';
@@ -212,10 +224,14 @@
         }
 
         async function fetchMovies(page = 1) {
+            if (page < 1 || page > totalPages) {
+                return;
+            }
             try {
                 const response = await fetchWithAuth(`${API_BASE_URL}/api/movies?page=${page}&search=${currentSearch}&category=${currentCategory}&sort=${currentSort}`);
                 if (response.ok) {
                     const data = await response.json();
+                    totalPages = data.total_pages;
                     displayMovies(data.movies);
                     setupPagination(data.total_pages, data.current_page);
                 } else {
@@ -300,6 +316,13 @@
                 currentSort = e.target.dataset.sort;
                 fetchMovies(1);
                 updateButtonStyles(sortButtons, e.target);
+            }
+        });
+
+        gotoPageBtn.addEventListener('click', () => {
+            const page = parseInt(pageInput.value);
+            if (!isNaN(page)) {
+                fetchMovies(page);
             }
         });
 

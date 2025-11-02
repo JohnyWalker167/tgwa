@@ -17,7 +17,7 @@
         }
         @media (max-width: 600px) {
             .file-grid {
-                grid-template-columns: repeat(2, 1fr);
+                grid-template-columns: repeat(1, 1fr);
                 gap: 0.5rem;
             }
             .file-tile {
@@ -84,9 +84,9 @@
             color: #fff;
             border: 1px solid #555;
         }
-        .btn-primary {
-            background-image: linear-gradient(to right, #e50914, #f40612);
-            border: none;
+        .btn-blue {
+            background-color: #007bff;
+            color: #fff;
         }
         .pagination .page-link {
             background-color: #222;
@@ -133,7 +133,7 @@
     </div>
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <a href="index.html" class="btn btn-primary">Back to Library</a>
+            <a href="index.html" class="btn btn-blue">Back to Library</a>
             <input id="search-input" class="form-control w-50" type="search" placeholder="Search" aria-label="Search">
         </div>
 
@@ -147,6 +147,11 @@
         <nav aria-label="Page navigation">
             <ul id="pagination" class="pagination justify-content-center mt-4"></ul>
         </nav>
+
+        <div class="d-flex justify-content-center mt-2">
+            <input type="number" id="page-input" class="form-control" style="width: 100px;" placeholder="Page">
+            <button id="goto-page" class="btn btn-primary ms-2">Go</button>
+        </div>
     </div>
 
     <script src="config.js"></script>
@@ -159,7 +164,10 @@
 
         const authHeader = { 'Authorization': `Bearer ${token}` };
         const searchInput = document.getElementById('search-input');
+        const pageInput = document.getElementById('page-input');
+        const gotoPageBtn = document.getElementById('goto-page');
         let currentSort = 'recent';
+        let totalPages = 1;
 
         async function fetchWithAuth(url, options = {}) {
             loader.style.display = 'flex';
@@ -178,10 +186,14 @@
         }
 
         async function fetchFiles(page = 1, search = '', sort = 'recent') {
+            if (page < 1 || page > totalPages) {
+                return;
+            }
             try {
                 const response = await fetchWithAuth(`${API_BASE_URL}/api/others?page=${page}&search=${search}&sort=${sort}`);
                 if (response.ok) {
                     const data = await response.json();
+                    totalPages = data.total_pages;
                     displayFiles(data.files);
                     setupPagination(data.total_pages, data.current_page, search, sort);
                 } else {
@@ -252,6 +264,13 @@
 
         searchInput.addEventListener('input', (e) => {
             fetchFiles(1, e.target.value, currentSort);
+        });
+
+        gotoPageBtn.addEventListener('click', () => {
+            const page = parseInt(pageInput.value);
+            if (!isNaN(page)) {
+                fetchFiles(page, searchInput.value, currentSort);
+            }
         });
 
         document.getElementById('recent-btn').addEventListener('click', () => {

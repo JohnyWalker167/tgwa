@@ -16,7 +16,6 @@ from utility import (
     auto_delete_message,
     get_allowed_channels,
     queue_file_for_processing,
-    invalidate_search_cache,
     file_queue,
     is_user_authorized,
     tokens_col,
@@ -25,6 +24,7 @@ from utility import (
 )
 from query_helper import store_query
 from app import bot
+from cache import invalidate_cache
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +126,7 @@ async def channel_file_handler(client, message):
 
         await queue_file_for_processing(message)
         await file_queue.join()
-        invalidate_search_cache()
+        invalidate_cache()
     except Exception as e:
         logger.error(f"Error in channel_file_handler: {e}")
 
