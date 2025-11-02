@@ -167,8 +167,6 @@ async def watch_queue(reply, total_files):
     final_message = f"✅ <b>Indexing completed!</b> {total_files} files processed."
     if last_message != final_message:
         await safe_api_call(reply.edit_text(final_message))
-        
-    invalidate_cache()
 
 @bot.on_message(filters.command("index") & filters.private & filters.user(OWNER_ID))
 async def index_channel_files(client, message):
