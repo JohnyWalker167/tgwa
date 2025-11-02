@@ -31,6 +31,42 @@ from mutagen.mp4 import MP4
 from mutagen.id3 import ID3, APIC
 from mutagen import File as MutagenFile
 
+async def upload_to_imgbb(image_url):
+    """
+    Downloads an image, uploads it to imgbb, and returns the new URL.
+    """
+    if not image_url:
+        return None
+
+    temp_file_path = f"/tmp/{uuid.uuid4()}.jpg"
+
+    try:
+        # 1. Download the image
+        async with aiohttp.ClientSession() as session:
+            async with session.get(image_url) as response:
+                if response.status != 200:
+                    raise ValueError(f"Failed to download image from URL: Status {response.status}")
+                with open(temp_file_path, "wb") as f:
+                    while True:
+                        chunk = await response.content.read(1024)
+                        if not chunk:
+                            break
+                        f.write(chunk)
+
+        # 2. Upload the local file
+        async with imgbbpy.AsyncClient(IMGBB_API_KEY) as client:
+            image = await client.upload(file=temp_file_path)
+            return image.url
+
+    except Exception as e:
+        logger.error(f"Error during imgbb upload process: {e}")
+        raise ValueError(f"Failed to upload image to imgbb: {e}")
+
+    finally:
+        # 3. Delete the temporary file
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+
 # =========================
 # Constants & Globals
 # =========================
@@ -233,42 +269,7 @@ async def get_user_firstname(user_id: int) -> str:
     except Exception as e:
         logger.error(f"Error getting user's first name: {e}")
         return "Anonymous"
-
-async def upload_to_imgbb(image_url):
-    """
-    Downloads an image, uploads it to imgbb, and returns the new URL.
-    """
-    if not image_url:
-        return None
-
-    temp_file_path = f"/tmp/{uuid.uuid4()}.jpg"
-
-    try:
-        # 1. Download the image
-        async with aiohttp.ClientSession() as session:
-            async with session.get(image_url) as response:
-                if response.status != 200:
-                    raise ValueError(f"Failed to download image from URL: Status {response.status}")
-                with open(temp_file_path, "wb") as f:
-                    while True:
-                        chunk = await response.content.read(1024)
-                        if not chunk:
-                            break
-                        f.write(chunk)
-
-        # 2. Upload the local file
-        async with imgbbpy.AsyncClient(IMGBB_API_KEY) as client:
-            image = await client.upload(file=temp_file_path)
-            return image.url
     
-   except Exception as e:
-        logger.error(f"Error during imgbb upload process: {e}")
-        raise ValueError(f"Failed to upload image to imgbb: {e}")
-
-    finally:
-        # 3. Delete the temporary file
-        if os.path.exists(temp_file_path):
-            os.remove(temp_file_path)
 # =========================
 # Token Utilities
 # =========================
