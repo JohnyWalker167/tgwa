@@ -31,6 +31,7 @@ from mutagen.mp4 import MP4
 from mutagen.id3 import ID3, APIC
 from mutagen import File as MutagenFile
 
+
 async def upload_to_imgbb(image_url):
     """
     Downloads an image, uploads it to imgbb, and returns the new URL.
@@ -39,7 +40,7 @@ async def upload_to_imgbb(image_url):
         return None
 
     temp_file_path = f"/tmp/{uuid.uuid4()}.jpg"
-
+    client = None
     try:
         # 1. Download the image
         async with aiohttp.ClientSession() as session:
@@ -54,16 +55,18 @@ async def upload_to_imgbb(image_url):
                         f.write(chunk)
 
         # 2. Upload the local file
-        async with imgbbpy.AsyncClient(IMGBB_API_KEY) as client:
-            image = await client.upload(file=temp_file_path)
-            return image.url
+        client = imgbbpy.AsyncClient(IMGBB_API_KEY)
+        image = await client.upload(file=temp_file_path)
+        return image.url
 
     except Exception as e:
         logger.error(f"Error during imgbb upload process: {e}")
         raise ValueError(f"Failed to upload image to imgbb: {e}")
 
     finally:
-        # 3. Delete the temporary file
+        # 3. Clean up resources
+        if client:
+            await client.close()
         if os.path.exists(temp_file_path):
             os.remove(temp_file_path)
 
