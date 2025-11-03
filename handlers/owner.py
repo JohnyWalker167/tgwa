@@ -162,7 +162,7 @@ async def watch_queue(reply, total_files):
         if last_message != current_message:
             await safe_api_call(reply.edit_text(current_message))
             last_message = current_message
-        await asyncio.sleep(3)
+        await asyncio.sleep(10)
 
     final_message = f"✅ <b>Indexing completed!</b> {total_files} files processed."
     if last_message != final_message:
