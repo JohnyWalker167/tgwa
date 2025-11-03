@@ -50,7 +50,7 @@ async def get_tmdb_entries(admin_id: int = Depends(get_current_admin), page: int
         query["title"] = {"$regex": escaped_search, "$options": "i"}
 
     entries = []
-    async for entry in tmdb_col.find(query).skip(skip).limit(page_size):
+    async for entry in tmdb_col.find(query).sort("_id", -1).skip(skip).limit(page_size):
         entries.append({
             "tmdb_id": entry.get("tmdb_id"),
             "title": entry.get("title"),
@@ -90,7 +90,7 @@ async def get_files(admin_id: int = Depends(get_current_admin), page: int = 1, s
         total_files = result[0]['totalCount'][0]['total'] if result and 'totalCount' in result[0] and result[0]['totalCount'] else 0
     else:
         files = []
-        async for file in files_col.find().skip(skip).limit(page_size):
+        async for file in files_col.find().sort("_id", -1).skip(skip).limit(page_size):
             files.append({
                 "id": str(file.get("_id")),
                 "file_name": file.get("file_name"),
