@@ -224,6 +224,16 @@
         let fileSearchQuery = '';
         const selectedFileIds = new Set();
 
+        // 👇 Debounce helper
+        function debounce(func, delay) {
+            let timeout;
+            return function(...args) {
+                const context = this;
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(context, args), delay);
+            };
+        }
+
         // 👇 Universal fetch helper
         async function fetchWithAuth(url, options = {}) {
             loader.style.display = 'block';
@@ -384,16 +394,18 @@
         // --------------------------
         // File Search
         // --------------------------
+        const debouncedLoadFiles = debounce(loadFiles, 1000);
         document.getElementById('file-search').addEventListener('input', (e) => {
             fileSearchQuery = e.target.value;
             filesCurrentPage = 1;
-            loadFiles(fileSearchQuery);
+            debouncedLoadFiles(fileSearchQuery);
         });
 
+        const debouncedLoadTmdbEntries = debounce(loadTmdbEntries, 1000);
         document.getElementById('tmdb-search').addEventListener('input', (e) => {
             tmdbSearchQuery = e.target.value;
             tmdbCurrentPage = 1;
-            loadTmdbEntries();
+            debouncedLoadTmdbEntries();
         });
 
         document.getElementById('tmdb-prev').addEventListener('click', () => {

@@ -315,7 +315,7 @@
             }
         }
 
-        const debouncedFetchMovies = debounce(fetchMovies, 600);
+        const debouncedFetchMovies = debounce(fetchMovies, 1000);
 
         searchInput.addEventListener('input', (e) => {
             currentSearch = e.target.value;

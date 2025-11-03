@@ -279,7 +279,7 @@
             document.getElementById('oldest-btn').className = `btn ${currentSort === 'oldest' ? 'btn-danger' : 'btn-outline-light'}`;
         }
 
-        const debouncedFetchFiles = debounce(fetchFiles, 600);
+        const debouncedFetchFiles = debounce(fetchFiles, 1000);
 
         searchInput.addEventListener('input', (e) => {
             currentSearch = e.target.value;
