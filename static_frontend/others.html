@@ -197,7 +197,6 @@
 
         function updateURL() {
             const params = new URLSearchParams(window.location.search);
-            params.set('search', currentSearch);
             params.set('sort', currentSort);
             window.history.replaceState({}, '', `${window.location.pathname}?${params}`);
         }
@@ -280,7 +279,7 @@
             document.getElementById('oldest-btn').className = `btn ${currentSort === 'oldest' ? 'btn-danger' : 'btn-outline-light'}`;
         }
 
-        const debouncedFetchFiles = debounce(fetchFiles, 300);
+        const debouncedFetchFiles = debounce(fetchFiles, 600);
 
         searchInput.addEventListener('input', (e) => {
             currentSearch = e.target.value;

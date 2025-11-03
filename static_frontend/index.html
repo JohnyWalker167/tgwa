@@ -234,7 +234,6 @@
 
         function updateURL() {
             const params = new URLSearchParams(window.location.search);
-            params.set('search', currentSearch);
             params.set('category', currentCategory);
             params.set('sort', currentSort);
             window.history.replaceState({}, '', `${window.location.pathname}?${params}`);
@@ -316,7 +315,7 @@
             }
         }
 
-        const debouncedFetchMovies = debounce(fetchMovies, 300);
+        const debouncedFetchMovies = debounce(fetchMovies, 600);
 
         searchInput.addEventListener('input', (e) => {
             currentSearch = e.target.value;

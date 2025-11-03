@@ -80,26 +80,13 @@ AUTO_DELETE_SECONDS = 2 * 60
 logger = logging.getLogger(__name__)
 
 def build_search_pipeline(query, match_query, skip, limit):
-    # Split the query string into words
-    terms = query.strip().lower().split()
-
-    # Create a separate `text` clause for each term
-    must_clauses = [
-        {
-            "text": {
-                "query": term,
-                "path": "file_name"
-            }
-        }
-        for term in terms
-    ]
-
-    # Build search stage with compound.must
+    # Build search stage with phrase
     search_stage = {
         "$search": {
             "index": "default",
-            "compound": {
-                "must": must_clauses
+            "phrase": {
+                "query": query.strip(),
+                "path": "file_name"
             }
         }
     }
