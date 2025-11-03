@@ -4,7 +4,6 @@ import aiohttp
 import asyncio
 import base64
 import uuid
-import time
 import PTN
 import os
 import logging
@@ -563,7 +562,7 @@ async def process_tmdb_info(bot, file_info):
             result = await get_movie_id(title, year)
 
         if not result:
-            await safe_api_call(bot.send_message(LOG_CHANNEL_ID, f"TMDB Info not found for {file_info['file_name']}"))
+            await safe_api_call(bot.send_message(LOG_CHANNEL_ID, f"TMDB Info not found for <code>{title}</code>"))
             return None
           
         tmdb_id, tmdb_type = result['id'], result['media_type']
@@ -606,7 +605,7 @@ async def process_tmdb_info(bot, file_info):
         return tmdb_id, tmdb_type
 
     except Exception as e:
-        await safe_api_call(bot.send_message(LOG_CHANNEL_ID, f"TMDB Info not found for {file_info['file_name']}: {e}"))
+        logger.error(f"Info not found {title}: {e}")
         return None
 
 

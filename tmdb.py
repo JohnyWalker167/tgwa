@@ -19,9 +19,7 @@ async def get_imdb_details(imdb_id):
                     return {}
                 data = await resp.json()
                 return{
-                    "name": data.get("short").get("name"),
                     "rating": data.get("short").get("aggregateRating").get("ratingValue"),
-                    "year": data.get("top").get("releaseYear").get("year"),
                     "plot": data.get("short").get("description")
                 }
             
@@ -49,10 +47,10 @@ async def format_tmdb_info(tmdb_type, movie_id, data):
         imdb_id = data.get('imdb_id')
         imdb_info = await get_imdb_details(imdb_id) if imdb_id else {}
 
-        title = imdb_info.get('name') or data.get('title')
+        title = data.get('title')
         genre = extract_genres(data)
         genre_tags = " ".join([genre_tag_with_emoji(g) for g in genre])
-        release_year = imdb_info.get('year') or data.get('release_date', '') if data.get('release_date') else ""
+        release_year = data.get('release_date', '') if data.get('release_date') else ""
         director = cast_crew.get('director')
         starring = ", ".join(cast_crew.get('starring', [])) if cast_crew.get('starring') else None
         spoken_languages = ", ".join([lang.get('name', '') for lang in data.get('spoken_languages', [])])
@@ -83,10 +81,10 @@ async def format_tmdb_info(tmdb_type, movie_id, data):
         imdb_id = get_tv_imdb_id_sync(movie_id)
         imdb_info = await get_imdb_details(imdb_id) if imdb_id else {}
 
-        title = imdb_info.get('name') or data.get('name')
+        title = data.get('name')
         genre = extract_genres(data)
         genre_tags = " ".join([genre_tag_with_emoji(g) for g in genre])
-        release_year = imdb_info.get('year') or data.get('first_air_date', '') if data.get('first_air_date') else ""
+        release_year = data.get('first_air_date', '') if data.get('first_air_date') else ""
         director = ", ".join([creator['name'] for creator in data.get('created_by', [])]) if data.get('created_by') else cast_crew.get('director')
         starring = ", ".join(cast_crew.get('starring', [])) if cast_crew.get('starring') else None
         spoken_languages = ", ".join([lang.get('name', '') for lang in data.get('spoken_languages', [])])

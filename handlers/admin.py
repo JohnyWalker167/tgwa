@@ -1,6 +1,5 @@
 import re
 from fastapi import APIRouter, Depends, HTTPException, Header, status
-from fastapi.responses import FileResponse
 from db import tmdb_col, files_col
 from utility import is_user_authorized, build_search_pipeline, safe_api_call, upsert_tmdb_info, upload_to_imgbb
 from config import OWNER_ID, SEND_UPDATES, UPDATE_CHANNEL_ID
@@ -134,10 +133,9 @@ async def add_tmdb_entry(data: dict, admin_id: int = Depends(get_current_admin))
 
     exists = await tmdb_col.find_one({"tmdb_id": tmdb_id, "tmdb_type": tmdb_type})
 
+    await upsert_tmdb_info(tmdb_id, tmdb_type, poster_path, name, year, rating, plot, trailer_url, imdb_id)
+    
     if exists:
-        await upsert_tmdb_info(tmdb_id, tmdb_type, poster_path, name, year, rating, plot, trailer_url, imdb_id)
-
-
         if SEND_UPDATES and poster_url:
             keyboard = InlineKeyboardMarkup(
                 [[InlineKeyboardButton("🎥 Trailer", url=trailer_url)]]

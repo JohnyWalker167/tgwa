@@ -12,7 +12,12 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     handlers=[
-        logging.FileHandler(LOG_FILE, encoding="utf-8"),
+        RotatingFileHandler(
+            LOG_FILE,
+            maxBytes=5 * 1024 * 1024,  # Rotate after 5 MB (adjust as needed)
+            backupCount=5,             # Keep 5 old log files
+            encoding="utf-8"
+        ),
         logging.StreamHandler()
     ]
 )
