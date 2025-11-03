@@ -207,6 +207,15 @@
         let currentSearch = '';
         let totalPages = 1;
 
+        function debounce(func, delay) {
+            let timeout;
+            return function(...args) {
+                const context = this;
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(context, args), delay);
+            };
+        }
+
         async function fetchWithAuth(url, options = {}) {
             loader.style.display = 'flex';
             try {
@@ -223,10 +232,19 @@
             }
         }
 
+        function updateURL() {
+            const params = new URLSearchParams(window.location.search);
+            params.set('search', currentSearch);
+            params.set('category', currentCategory);
+            params.set('sort', currentSort);
+            window.history.replaceState({}, '', `${window.location.pathname}?${params}`);
+        }
+
         async function fetchMovies(page = 1) {
-            if (page < 1 || page > totalPages) {
+            if (page < 1 || (page > totalPages && totalPages > 0)) {
                 return;
             }
+            updateURL();
             try {
                 const response = await fetchWithAuth(`${API_BASE_URL}/api/movies?page=${page}&search=${currentSearch}&category=${currentCategory}&sort=${currentSort}`);
                 if (response.ok) {
@@ -298,9 +316,11 @@
             }
         }
 
+        const debouncedFetchMovies = debounce(fetchMovies, 300);
+
         searchInput.addEventListener('input', (e) => {
             currentSearch = e.target.value;
-            fetchMovies(1);
+            debouncedFetchMovies(1);
         });
 
         categoryButtons.addEventListener('click', (e) => {
@@ -425,7 +445,19 @@
             }
         }
 
+        function loadStateFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            currentSearch = params.get('search') || '';
+            currentCategory = params.get('category') || 'movie';
+            currentSort = params.get('sort') || 'year';
+
+            searchInput.value = currentSearch;
+            updateButtonStyles(categoryButtons, categoryButtons.querySelector(`[data-category="${currentCategory}"]`));
+            updateButtonStyles(sortButtons, sortButtons.querySelector(`[data-sort="${currentSort}"]`));
+        }
+
         loadUser();
+        loadStateFromURL();
         fetchMovies();
         fetchComments();
     </script>

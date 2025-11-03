@@ -170,7 +170,6 @@
                     <div class="col-md-8">
                         <h1>${details.file_name}</h1>
                         <a href="${details.stream_url}" class="btn btn-success mt-3">Play</a>
-                        <button class="btn btn-primary mt-3" onclick="sendFile('${details._id}', this)">Send</button>
                     </div>
                 </div>
             `;
@@ -192,6 +191,8 @@
                 } else if (response.status === 429) {
                     alert('Your Limit Has Exceeded. Try again later');
                     button.disabled = true;
+                    button.classList.remove('btn-primary');
+                    button.classList.add('btn-secondary');
                 } else {
                     console.error('Failed to send file');
                     alert('Failed to send file. Please try again.');
@@ -206,4 +207,5 @@
     </script>
 </body>
 </html>
+
 

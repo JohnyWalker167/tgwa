@@ -489,7 +489,8 @@
                 closePosterModal();
                 loadFiles(fileSearchQuery);
             } else {
-                showNotification('Failed to update file poster.', true);
+                const error = await response.json();
+                showNotification(error.detail || 'Failed to update file poster.', true);
             }
         }
 

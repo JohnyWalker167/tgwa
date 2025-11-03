@@ -167,7 +167,17 @@
         const pageInput = document.getElementById('page-input');
         const gotoPageBtn = document.getElementById('goto-page');
         let currentSort = 'recent';
+        let currentSearch = '';
         let totalPages = 1;
+
+        function debounce(func, delay) {
+            let timeout;
+            return function(...args) {
+                const context = this;
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(context, args), delay);
+            };
+        }
 
         async function fetchWithAuth(url, options = {}) {
             loader.style.display = 'flex';
@@ -185,10 +195,18 @@
             }
         }
 
+        function updateURL() {
+            const params = new URLSearchParams(window.location.search);
+            params.set('search', currentSearch);
+            params.set('sort', currentSort);
+            window.history.replaceState({}, '', `${window.location.pathname}?${params}`);
+        }
+
         async function fetchFiles(page = 1, search = '', sort = 'recent') {
-            if (page < 1 || page > totalPages) {
+            if (page < 1 || (page > totalPages && totalPages > 0)) {
                 return;
             }
+            updateURL();
             try {
                 const response = await fetchWithAuth(`${API_BASE_URL}/api/others?page=${page}&search=${search}&sort=${sort}`);
                 if (response.ok) {
@@ -262,8 +280,11 @@
             document.getElementById('oldest-btn').className = `btn ${currentSort === 'oldest' ? 'btn-danger' : 'btn-outline-light'}`;
         }
 
+        const debouncedFetchFiles = debounce(fetchFiles, 300);
+
         searchInput.addEventListener('input', (e) => {
-            fetchFiles(1, e.target.value, currentSort);
+            currentSearch = e.target.value;
+            debouncedFetchFiles(1, currentSearch, currentSort);
         });
 
         gotoPageBtn.addEventListener('click', () => {
@@ -285,7 +306,17 @@
             updateButtonStyles();
         });
 
-        fetchFiles(1, '', 'recent');
+        function loadStateFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            currentSearch = params.get('search') || '';
+            currentSort = params.get('sort') || 'recent';
+
+            searchInput.value = currentSearch;
+            updateButtonStyles();
+        }
+
+        loadStateFromURL();
+        fetchFiles(1, currentSearch, currentSort);
     </script>
 </body>
 </html>
