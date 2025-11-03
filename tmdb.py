@@ -165,6 +165,8 @@ def truncate_overview(overview):
     Returns:
     - str: Truncated overview with an ellipsis if it exceeds the limit.
     """
+    if not overview:
+        return None
     MAX_OVERVIEW_LENGTH = 600  # Define your maximum character length for the summary
     if len(overview) > MAX_OVERVIEW_LENGTH:
         return overview[:MAX_OVERVIEW_LENGTH] + "..."
