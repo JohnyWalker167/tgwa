@@ -94,7 +94,8 @@ async def get_files(admin_id: int = Depends(get_current_admin), page: int = 1, s
             files.append({
                 "id": str(file.get("_id")),
                 "file_name": file.get("file_name"),
-                "tmdb_id": file.get("tmdb_id")
+                "tmdb_id": file.get("tmdb_id"),
+                "poster_url": file.get("poster_url")            
             })
         total_files = await files_col.count_documents({})
         
