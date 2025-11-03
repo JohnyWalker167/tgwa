@@ -132,8 +132,8 @@ async def add_tmdb_entry(data: dict, admin_id: int = Depends(get_current_admin))
     imdb_id = info.get("imdb_id")
 
     exists = await tmdb_col.find_one({"tmdb_id": tmdb_id, "tmdb_type": tmdb_type})
-
-    await upsert_tmdb_info(tmdb_id, tmdb_type, poster_path, name, year, rating, plot, trailer_url, imdb_id)
+    if name and poster_url:
+        await upsert_tmdb_info(tmdb_id, tmdb_type, poster_path, name, year, rating, plot, trailer_url, imdb_id)
     
     if exists:
         if SEND_UPDATES and poster_url:
