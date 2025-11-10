@@ -61,6 +61,7 @@ SEND_UPDATES = os.getenv('SEND_UPDATES', 'True').lower() in ('true', '1', 't')
 
 MY_DOMAIN = os.getenv('MY_DOMAIN')
 CF_DOMAIN = os.getenv('CF_DOMAIN')
+CF_DOMAINX = os.getenv('CF_DOMAINX')
 
 TOKEN_VALIDITY_SECONDS = 24 * 60 * 60  # 24 hours
 
