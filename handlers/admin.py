@@ -136,7 +136,7 @@ async def add_tmdb_entry(data: dict, admin_id: int = Depends(get_current_admin))
     if name and poster_url:
         await upsert_tmdb_info(tmdb_id, tmdb_type, poster_path, name, year, rating, plot, trailer_url, imdb_id)
     
-    if exists:
+    if not exists:
         if SEND_UPDATES and poster_url:
             keyboard = InlineKeyboardMarkup(
                 [[InlineKeyboardButton("🎥 Trailer", url=trailer_url)]]
