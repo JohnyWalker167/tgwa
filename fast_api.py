@@ -23,7 +23,7 @@ api.include_router(admin_router)
 
 api.add_middleware(
     CORSMiddleware,
-    allow_origins=[f"{CF_DOMAIN}"],  # Allow all origins
+    allow_origins=[f"{CF_DOMAIN}", f"{CF_DOMAINX}"],  # Allow all origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
