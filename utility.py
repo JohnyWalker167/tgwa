@@ -342,7 +342,7 @@ async def upsert_tmdb_info(tmdb_id, tmdb_type, poster_path, name, year, rating, 
         upsert=True
     )
 
-async def restore_tmdb_photos(bot, start_id=None):
+async def restore_tmdb_photos(bot, message, start_id=None):
     """
     Restore all TMDB poster photos from the database.
     For each tmdb entry, fetch details and send the poster to UPDATE_CHANNEL_ID.
@@ -352,20 +352,30 @@ async def restore_tmdb_photos(bot, start_id=None):
         query['_id'] = {'$gt': start_id}
     cursor = tmdb_col.find(query).sort('_id', 1)
     docs = await cursor.to_list(length=None)
-    for doc in docs:
+    total_docs = len(docs)
+    status_message = await message.reply_text(f"🔁 **Restoring TMDB info...** 0/{total_docs} processed.")
+
+    for i, doc in enumerate(docs):
         tmdb_id = doc.get("tmdb_id")
         tmdb_type = doc.get("tmdb_type")
         try:
             info = await get_info(tmdb_type, tmdb_id)
             poster_url = info.get('poster_url')
+            poster_path = info.get('poster_path')
             trailer_url = info.get('trailer_url')
-            message = info.get('message')
+            message_caption = info.get('message')
+            name = info.get('title')
+            year = info.get('year')
+            rating = info.get('rating')
+            plot = info.get("plot")
+            imdb_id = info.get("imdb_id")
+            await upsert_tmdb_info(tmdb_id, tmdb_type, poster_path, name, year, rating, plot, trailer_url, imdb_id)
 
             keyboard = InlineKeyboardMarkup(
                 [[InlineKeyboardButton("🎥 Trailer", url=trailer_url)]]
             ) if trailer_url else None
 
-            if poster_url:
+            if poster_url and SEND_UPDATES:
                 await safe_api_call(
                     bot.send_photo(
                         UPDATE_CHANNEL_ID,
@@ -375,9 +385,12 @@ async def restore_tmdb_photos(bot, start_id=None):
                         reply_markup=keyboard
                     )
                 )
+            if (i + 1) % 10 == 0 or (i + 1) == total_docs:
+                await safe_api_call(status_message.edit_text(f"🔁 **Restoring TMDB info...** {i + 1}/{total_docs} processed."))
         except Exception as e:
             logger.error(f"Error in restore_tmdb_photos for tmdb_id={tmdb_id}: {e}")
             continue
+    await status_message.edit_text(f"✅ **Restore completed!** {total_docs} records processed.")
 
 
 def extract_file_info(message, channel_id=None):

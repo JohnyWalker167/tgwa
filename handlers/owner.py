@@ -23,7 +23,8 @@ from utility import (
     human_readable_size,
     extract_tmdb_link,
     get_info, 
-    upsert_tmdb_info
+    upsert_tmdb_info,
+    extract_file_info
 )
 from app import bot
 
@@ -231,6 +232,69 @@ async def index_channel_files(client, message):
         logger.error(f"[index_channel_files] Error: {e}")
         await message.reply_text("❌ <b>An error occurred during the indexing process.</b>")
 
+@bot.on_message(filters.command("update") & filters.private & filters.user(OWNER_ID))
+async def update_channel_files(client, message):
+    try:
+        args = message.command
+        if len(args) != 3:
+            await message.reply_text("<b>Usage:</b> /update <start_link> <end_link>")
+            return
+
+        start_link, end_link = args[1], args[2]
+
+        try:
+            start_channel_id, start_msg_id = extract_channel_and_msg_id(start_link)
+            end_channel_id, end_msg_id = extract_channel_and_msg_id(end_link)
+        except ValueError as e:
+            await message.reply_text(f"⚠️ <b>Invalid Link:</b> {e}")
+            return
+
+        if start_channel_id != end_channel_id:
+            await message.reply_text("⚠️ <b>Start and end links must be from the same channel.</b>")
+            return
+
+        channel_id = start_channel_id
+        allowed_channels = await get_allowed_channels()
+        if channel_id not in allowed_channels:
+            await message.reply_text("❌ <b>This channel is not allowed for updating.</b>")
+            return
+
+        start_id = min(start_msg_id, end_msg_id)
+        end_id = max(start_msg_id, end_msg_id)
+
+        reply = await message.reply_text(f"🔁 <b>Updating files from <code>{start_id}</code> to <code>{end_id}</code>...</b>")
+
+        batch_size = 50
+        count = 0
+        for batch_start in range(start_id, end_id + 1, batch_size):
+            batch_end = min(batch_start + batch_size - 1, end_id)
+            ids = list(range(batch_start, batch_end + 1))
+            messages = []
+            try:
+                messages = await safe_api_call(client.get_messages(channel_id, ids))
+            except Exception as e:
+                logger.warning(f"Could not get messages in batch {batch_start}-{batch_end}: {e}")
+
+            for msg in messages:
+                if not msg:
+                    continue
+                if msg.document or msg.video or msg.audio or msg.photo:
+                    file_info = extract_file_info(msg, channel_id=channel_id)
+                    if file_info["file_name"]:
+                        await files_col.update_one(
+                            {"file_name": file_info["file_name"]},
+                            {"$set": {"message_id": msg.id, "channel_id": channel_id}},
+                        )
+                        count += 1
+            await safe_api_call(reply.edit_text(f"🔁 <b>Updating in progress...</b> {count} files updated so far."))
+
+        await safe_api_call(reply.edit_text(f"✅ <b>Update completed!</b> {count} files updated."))
+    except Exception as e:
+        logger.error(f"[update_channel_files] Error: {e}")
+        await message.reply_text("❌ <b>An error occurred during the updating process.</b>")
+
+
+
 @bot.on_message(filters.private & filters.command("del") & filters.user(OWNER_ID))
 async def delete_command(client, message):
     try:
@@ -310,7 +374,7 @@ async def update_info(client, message):
                 await message.reply_text("Invalid ObjectId format for start_id.")
                 return
         if restore_type == "tmdb":
-            await restore_tmdb_photos(bot, start_id)
+            await restore_tmdb_photos(bot, message, start_id)
         else:
             await message.reply_text("Invalid restore type. Use 'tmdb'.")
     except Exception as e:
