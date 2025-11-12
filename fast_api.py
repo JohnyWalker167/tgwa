@@ -78,12 +78,13 @@ async def send_file_to_user(request: SendFileRequest, user_id: int = Depends(get
             message_id=message_id,
             protect_content=True
         )
-
-        await auth_users_col.update_one(
-            {"user_id": user_id},
-            {"$inc": {"file_count": 1}},
-            upsert=True
-        )
+        
+        if user_id != OWNER_ID:
+            await auth_users_col.update_one(
+                {"user_id": user_id},
+                {"$inc": {"file_count": 1}},
+                upsert=True
+            )
 
         return JSONResponse(content={"message": "File sent successfully"})
 
