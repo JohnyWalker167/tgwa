@@ -176,21 +176,12 @@ async def update_tmdb_entry(tmdb_id: int, tmdb_type: str, data: dict, admin_id: 
             rating = float(rating_str)
         except (ValueError, TypeError):
             rating = None
-
-    year_str = data.get("year")
-    if year_str == "":
-        year = None
-    else:
-        try:
-            year = int(year_str)
-        except (ValueError, TypeError):
-            year = None
             
     update_data = {
         "title": data.get("title"),
         "rating": rating,
         "plot": data.get("plot"),
-        "year": year,
+        "year": data.get("year"),
         "poster_path": data.get("poster_path")
     }
     await tmdb_col.update_one({"tmdb_id": tmdb_id, "tmdb_type": tmdb_type}, {"$set": update_data})
