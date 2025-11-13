@@ -207,7 +207,8 @@ async def get_movie_details(tmdb_id: str, tmdb_type: str, page: int = 1, user_id
     data = {
         "files": files,
         "total_pages": (total_files + page_size - 1) // page_size,
-        "current_page": page
+        "current_page": page,
+        "total_files": total_files
     }
     cache[cache_key] = data
     return data

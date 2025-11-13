@@ -54,6 +54,7 @@
             border: 1px solid #333;
             margin-bottom: -1px;
             transition: background-color 0.3s;
+            gap: 10px;
         }
 
         .file-item:hover {
@@ -67,6 +68,13 @@
 
         .file-item .btn {
             margin-top: 10px;
+        }
+
+        .file-item div {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: flex-end;
         }
 
         @media (min-width: 576px) {
@@ -246,7 +254,7 @@
         <div id="file-modal" class="modal" style="display: none;">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2>Found results</h2>
+                    <h2 id="modal-title">Found results</h2>
                 </div>
                 <div class="modal-body">
                     <ul id="file-list" class="file-list mt-4"></ul>
@@ -341,6 +349,7 @@
                 const response = await fetchWithAuth(`${API_BASE_URL}/api/details/${tmdbId}?tmdb_type=${tmdbType}&page=${page}`);
                 if (response.ok) {
                     const data = await response.json();
+                    document.getElementById('modal-title').textContent = `Found ${data.total_files} results`;
                     displayFiles(data.files);
                     setupPagination(data.total_pages, data.current_page);
                     document.querySelector('.modal-body').scrollTop = 0;

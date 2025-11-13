@@ -1,6 +1,6 @@
-
 <!doctype html>
 <html lang="en">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -11,33 +11,41 @@
             background-color: #141414;
             color: #fff;
         }
+
         .movie-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 1rem;
         }
+
         @media (max-width: 600px) {
             .movie-grid {
                 grid-template-columns: repeat(2, 1fr);
                 gap: 0.5rem;
             }
+
             .movie-tile {
                 border-radius: 5px;
             }
+
             #welcome-message {
                 font-size: 1.5rem;
             }
+
             #search-input {
                 width: 100% !important;
             }
+
             .d-flex.justify-content-between {
                 flex-direction: column;
                 align-items: stretch !important;
             }
-            .d-flex.justify-content-between > * {
+
+            .d-flex.justify-content-between>* {
                 margin-bottom: 0.5rem;
             }
         }
+
         .movie-tile {
             position: relative;
             cursor: pointer;
@@ -60,15 +68,18 @@
             gap: 4px;
             z-index: 2;
         }
+
         .movie-tile img {
             width: 100%;
             height: auto;
             object-fit: cover;
             transition: transform 0.3s;
         }
+
         .movie-tile:hover img {
             transform: scale(1.1);
         }
+
         .movie-tile .details-btn {
             position: absolute;
             top: 50%;
@@ -77,30 +88,36 @@
             opacity: 0;
             transition: opacity 0.3s;
         }
+
         .movie-tile:hover .details-btn {
             opacity: 1;
         }
+
         .form-control {
             background-color: #333;
             color: #fff;
             border: 1px solid #555;
         }
+
         .pagination .page-link {
             background-color: #222;
             border-color: #333;
             color: #fff;
         }
+
         .pagination .page-item.active .page-link {
             background-image: linear-gradient(to right, #e50914, #f40612);
             border: none;
         }
+
         .card-text {
             color: #fff;
         }
+
         .card-title {
             color: #fff;
         }
-        /* ---------- Loader ---------- */
+
         .loader-container {
             position: fixed;
             top: 0;
@@ -114,6 +131,7 @@
             align-items: center;
             z-index: 9999;
         }
+
         .loader {
             border: 5px solid #f3f3f3;
             border-top: 5px solid #e50914;
@@ -128,20 +146,27 @@
                 transform: rotate(360deg);
             }
         }
+
         .btn-red {
             background-color: #e50914;
             color: #fff;
         }
+
+        .btn-blue {
+            background-color: #007bff;
+            color: #fff;
+        }
     </style>
 </head>
+
 <body>
     <div id="loader" class="loader-container">
         <div class="loader"></div>
     </div>
+
     <div class="container mt-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1 id="welcome-message">Welcome!</h1>
-            <a href="others.html" class="btn btn-red">Others</a>
             <input id="search-input" class="form-control w-50 ms-2" type="search" placeholder="Search" aria-label="Search">
         </div>
 
@@ -150,12 +175,12 @@
                 <button type="button" class="btn btn-primary" data-category="movie">Movies</button>
                 <button type="button" class="btn btn-secondary" data-category="tv">Shows</button>
             </div>
-            
+
             <div id="sort-buttons" class="btn-group" role="group">
                 <button type="button" class="btn btn-secondary" data-sort="rating">Rating</button>
                 <button type="button" class="btn btn-secondary" data-sort="recent">Recently Added</button>
                 <button type="button" class="btn btn-primary" data-sort="year">Year</button>
-            </div>            
+            </div>
         </div>
 
         <div id="movie-grid" class="movie-grid"></div>
@@ -209,10 +234,9 @@
 
         function debounce(func, delay) {
             let timeout;
-            return function(...args) {
-                const context = this;
+            return function (...args) {
                 clearTimeout(timeout);
-                timeout = setTimeout(() => func.apply(context, args), delay);
+                timeout = setTimeout(() => func.apply(this, args), delay);
             };
         }
 
@@ -232,18 +256,9 @@
             }
         }
 
-        function updateURL() {
-            const params = new URLSearchParams(window.location.search);
-            params.set('category', currentCategory);
-            params.set('sort', currentSort);
-            window.history.replaceState({}, '', `${window.location.pathname}?${params}`);
-        }
-
         async function fetchMovies(page = 1) {
-            if (page < 1 || (page > totalPages && totalPages > 0)) {
-                return;
-            }
-            updateURL();
+            if (page < 1 || (page > totalPages && totalPages > 0)) return;
+
             try {
                 const response = await fetchWithAuth(`${API_BASE_URL}/api/movies?page=${page}&search=${currentSearch}&category=${currentCategory}&sort=${currentSort}`);
                 if (response.ok) {
@@ -267,21 +282,20 @@
                 tile.className = 'movie-tile';
 
                 const img = document.createElement('img');
-                img.src = movie.poster_path ? `${POSTER_BASE_URL}${movie.poster_path}` : 'https://via.placeholder.com/200x300';
+                img.src = movie.poster_path ? `${POSTER_BASE_URL}${movie.poster_path}` : 'https://i.ibb.co/qzmwLvx/No-Image-Available.jpg';
                 img.loading = 'lazy';
                 tile.appendChild(img);
 
-                // ⭐ Rating badge using movie.rating
                 if (movie.rating !== undefined && movie.rating !== null) {
-                   const ratingBadge = document.createElement('div');
-                   ratingBadge.className = 'rating-badge';
-                   ratingBadge.innerHTML = `⭐ ${movie.rating ?? 'N/A'}`;
-                   tile.appendChild(ratingBadge);
+                    const ratingBadge = document.createElement('div');
+                    ratingBadge.className = 'rating-badge';
+                    ratingBadge.innerHTML = `⭐ ${movie.rating ?? 'N/A'}`;
+                    tile.appendChild(ratingBadge);
                 }
 
                 const detailsBtn = document.createElement('a');
                 detailsBtn.href = `details.html?tmdb_id=${movie.tmdb_id}&tmdb_type=${movie.tmdb_type}`;
-                detailsBtn.className = 'btn btn-success details-btn';
+                detailsBtn.className = 'btn btn-blue details-btn';
                 detailsBtn.textContent = 'Details';
                 tile.appendChild(detailsBtn);
 
@@ -340,9 +354,7 @@
 
         gotoPageBtn.addEventListener('click', () => {
             const page = parseInt(pageInput.value);
-            if (!isNaN(page)) {
-                fetchMovies(page);
-            }
+            if (!isNaN(page)) fetchMovies(page);
         });
 
         function updateButtonStyles(buttonGroup, activeButton) {
@@ -435,7 +447,7 @@
         async function loadUser() {
             try {
                 const response = await fetchWithAuth(`${API_BASE_URL}/api/user/me`);
-                if(response.ok) {
+                if (response.ok) {
                     const data = await response.json();
                     document.getElementById('welcome-message').textContent = `Welcome, ${data.first_name}!`;
                 }
@@ -444,21 +456,11 @@
             }
         }
 
-        function loadStateFromURL() {
-            const params = new URLSearchParams(window.location.search);
-            currentSearch = params.get('search') || '';
-            currentCategory = params.get('category') || 'movie';
-            currentSort = params.get('sort') || 'year';
-
-            searchInput.value = currentSearch;
-            updateButtonStyles(categoryButtons, categoryButtons.querySelector(`[data-category="${currentCategory}"]`));
-            updateButtonStyles(sortButtons, sortButtons.querySelector(`[data-sort="${currentSort}"]`));
-        }
-
         loadUser();
-        loadStateFromURL();
         fetchMovies();
         fetchComments();
     </script>
 </body>
+
 </html>
+    
