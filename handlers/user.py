@@ -5,7 +5,7 @@ from pyrogram import filters, enums
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.errors import ChatAdminRequired, UserAlreadyParticipant
 
-from config import LOG_CHANNEL_ID, BOT_USERNAME, BACKUP_CHANNEL, CF_DOMAIN
+from config import LOG_CHANNEL_ID, BOT_USERNAME, BACKUP_CHANNEL, CF_DOMAIN, TMDB_CHANNEL_ID
 from utility import (
     add_user,
     is_token_valid,
@@ -119,10 +119,13 @@ async def start_handler(client, message):
 @bot.on_message(filters.channel & (filters.document | filters.video | filters.audio | filters.photo))
 async def channel_file_handler(client, message):
     try:
+        if message.chat.id not in TMDB_CHANNEL_ID:         
+            return
+
         allowed_channels = await get_allowed_channels()
         if message.chat.id not in allowed_channels:
             return
-
+            
         await queue_file_for_processing(message)
         await file_queue.join()
     except Exception as e:
