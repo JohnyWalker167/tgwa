@@ -307,7 +307,7 @@
                 item.textContent = `${entry.title} (${entry.type}) - ${entry.tmdb_id}`;
                 const deleteButton = document.createElement('button');
                 deleteButton.textContent = 'Delete';
-                deleteButton.onclick = () => deleteTmdbEntry(entry.tmdb_id);
+                deleteButton.onclick = () => deleteTmdbEntry(entry.tmdb_id, entry.type);
                 item.appendChild(deleteButton);
 
                 const editButton = document.createElement('button');
@@ -380,8 +380,8 @@
             }
         }
 
-        async function deleteTmdbEntry(tmdbId) {
-            const response = await fetchWithAuth(`${API_BASE_URL}/api/admin/tmdb/${tmdbId}`, { method: 'DELETE' });
+        async function deleteTmdbEntry(tmdbId, tmdbType) {
+            const response = await fetchWithAuth(`${API_BASE_URL}/api/admin/tmdb/${tmdbId}/${tmdbType}`, { method: 'DELETE' });
             if (response && response.ok) {
                 showNotification('TMDB entry deleted successfully!');
                 loadTmdbEntries();

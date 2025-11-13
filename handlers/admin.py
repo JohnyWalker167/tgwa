@@ -158,10 +158,10 @@ async def add_tmdb_entry(data: dict, admin_id: int = Depends(get_current_admin))
     invalidate_cache()
     return {"status": "success"}
 
-@router.delete("/tmdb/{tmdb_id}")
-async def delete_tmdb_entry(tmdb_id: int, admin_id: int = Depends(get_current_admin)):
-    await tmdb_col.delete_one({"tmdb_id": tmdb_id})
-    await files_col.update_many({"tmdb_id": tmdb_id}, {"$unset": {"tmdb_id": "", "tmdb_type": ""}})
+@router.delete("/tmdb/{tmdb_id}/{tmdb_type}")
+async def delete_tmdb_entry(tmdb_id: int, tmdb_type: str, admin_id: int = Depends(get_current_admin)):
+    await tmdb_col.delete_one({"tmdb_id": tmdb_id, "tmdb_type": tmdb_type})
+    await files_col.update_many({"tmdb_id": tmdb_id, "tmdb_type": tmdb_type}, {"$unset": {"tmdb_id": "", "tmdb_type": ""}})
     invalidate_cache()
     return {"status": "success"}
 
