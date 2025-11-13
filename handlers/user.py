@@ -92,8 +92,15 @@ async def start_handler(client, message):
             token_id = token_doc["token_id"] if token_doc else await generate_token(user_id)
             short_link = await shorten_url(get_token_link(token_id, BOT_USERNAME))
         
+        buttons = []
         if short_link:
-            reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🗝️ Verify", url=short_link)]])
+            buttons.append([InlineKeyboardButton("🗝️ Verify", url=short_link)])
+        
+        if CF_DOMAIN:
+            buttons.append([InlineKeyboardButton("Website", url=CF_DOMAIN)])
+
+        if buttons:
+            reply_markup = InlineKeyboardMarkup(buttons)
         else:
             reply_markup = None             
 
