@@ -196,7 +196,7 @@ async def get_movie_details(tmdb_id: str, tmdb_type: str, page: int = 1, user_id
         "file_name": {"$not": {"$regex": r"\.srt$", "$options": "i"}}
     }
 
-    files = await files_col.find(query).skip(skip).limit(page_size).to_list(length=page_size)
+    files = await files_col.find(query).sort("file_name", -1).skip(skip).limit(page_size).to_list(length=page_size)
     total_files = await files_col.count_documents(query) 
 
     # Convert ObjectId to string and add stream URL
