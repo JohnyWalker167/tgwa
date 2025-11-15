@@ -105,7 +105,7 @@ async def copy_file_handler(client, message):
         async with bot.copy_lock:
             for idx, msg_id in enumerate(range(start_id, end_id + 1), start=1):
                 try:
-                    msg = await safe_api_call(client.get_messages(source_channel_id, msg_id))
+                    msg = await safe_api_call(lambda: client.get_messages(source_channel_id, msg_id))
                     if not msg:
                         continue
 
@@ -116,7 +116,7 @@ async def copy_file_handler(client, message):
                     caption = msg.caption or getattr(media, "file_name", "No Caption")
                     caption = remove_unwanted(caption)
                     await asyncio.sleep(3)
-                    copied_msg = await safe_api_call(client.copy_message(
+                    copied_msg = await safe_api_call(lambda: client.copy_message(
                         chat_id=dest_channel_id,
                         from_chat_id=source_channel_id,
                         message_id=msg_id,
@@ -134,7 +134,7 @@ async def copy_file_handler(client, message):
                         )
 
                     if idx % 10 == 0 or idx == total:
-                        await safe_api_call(status_msg.edit_text(
+                        await safe_api_call(lambda: status_msg.edit_text(
                             f"🔁 <b>Copying in progress...</b>\n"
                             f"✅ <b>{count}</b> files copied so far.\n"
                             f"📂 <i>{idx}/{total} messages checked</i>"
@@ -145,7 +145,7 @@ async def copy_file_handler(client, message):
                     logger.warning(f"[copy_file_handler] Failed to copy message {msg_id}: {copy_error}")
                     continue
 
-        await safe_api_call(status_msg.edit_text(
+        await safe_api_call(lambda: status_msg.edit_text(
             f"✅ <b>Copy completed!</b>\n\n"
             f"📦 <b>Total files copied:</b> {count}\n"
             f"❌ <b>Failed to copy:</b> {failed}\n"
@@ -161,13 +161,13 @@ async def watch_queue(reply, total_files):
         processed_files = total_files - get_queue_size()
         current_message = f"🔁 <b>Processing files...</b> {processed_files}/{total_files} processed."
         if last_message != current_message:
-            await safe_api_call(reply.edit_text(current_message))
+            await safe_api_call(lambda: reply.edit_text(current_message))
             last_message = current_message
         await asyncio.sleep(10)
 
     final_message = f"✅ <b>Indexing completed!</b> {total_files} files processed."
     if last_message != final_message:
-        await safe_api_call(reply.edit_text(final_message))
+        await safe_api_call(lambda: reply.edit_text(final_message))
 
 @bot.on_message(filters.command("index") & filters.private & filters.user(OWNER_ID))
 async def index_channel_files(client, message):
@@ -210,7 +210,7 @@ async def index_channel_files(client, message):
             ids = list(range(batch_start, batch_end + 1))
             messages = []
             try:
-                messages = await safe_api_call(client.get_messages(channel_id, ids))
+                messages = await safe_api_call(lambda: client.get_messages(channel_id, ids))
             except Exception as e:
                 logger.warning(f"Could not get messages in batch {batch_start}-{batch_end}: {e}")
 
@@ -225,7 +225,7 @@ async def index_channel_files(client, message):
                         duplicate=dup
                     )
                     count += 1
-            await safe_api_call(reply.edit_text(f"🔁 <b>Indexing in progress...</b> {count} files queued so far."))
+            await safe_api_call(lambda: reply.edit_text(f"🔁 <b>Indexing in progress...</b> {count} files queued so far."))
 
         asyncio.create_task(watch_queue(reply, count))
     except Exception as e:
@@ -271,7 +271,7 @@ async def update_channel_files(client, message):
             ids = list(range(batch_start, batch_end + 1))
             messages = []
             try:
-                messages = await safe_api_call(client.get_messages(channel_id, ids))
+                messages = await safe_api_call(lambda: client.get_messages(channel_id, ids))
             except Exception as e:
                 logger.warning(f"Could not get messages in batch {batch_start}-{batch_end}: {e}")
 
@@ -286,9 +286,9 @@ async def update_channel_files(client, message):
                             {"$set": {"message_id": msg.id, "channel_id": channel_id}},
                         )
                         count += 1
-            await safe_api_call(reply.edit_text(f"🔁 <b>Updating in progress...</b> {count} files updated so far."))
+            await safe_api_call(lambda: reply.edit_text(f"🔁 <b>Updating in progress...</b> {count} files updated so far."))
 
-        await safe_api_call(reply.edit_text(f"✅ <b>Update completed!</b> {count} files updated."))
+        await safe_api_call(lambda: reply.edit_text(f"✅ <b>Update completed!</b> {count} files updated."))
     except Exception as e:
         logger.error(f"[update_channel_files] Error: {e}")
         await message.reply_text("❌ <b>An error occurred during the updating process.</b>")
@@ -433,7 +433,7 @@ async def broadcast_handler(client, message: Message):
         removed_count = 0
         broadcasting = True
 
-        status_message = await safe_api_call(message.reply_text(
+        status_message = await safe_api_call(lambda: message.reply_text(
             f"📢 Broadcast in progress...\n\n"
             f"👥 Total Users: {total_users}\n"
             f"✅ Sent: {sent_count}\n"
@@ -451,12 +451,12 @@ async def broadcast_handler(client, message: Message):
             try:
                 msg = message.reply_to_message
                 if msg.forward_from_chat:
-                    await safe_api_call(msg.copy(chat_id=user["user_id"],
+                    await safe_api_call(lambda: msg.copy(chat_id=user["user_id"],
                                                  caption=f"{msg.caption.html}\n\n✅ <b>Now Available!</b>",
                                                  reply_markup=msg.reply_markup
                                                  ))
                 else:
-                    await safe_api_call(msg.copy(user["user_id"]))
+                    await safe_api_call(lambda: msg.copy(user["user_id"]))
                 sent_count += 1
             except (UserIsBlocked, InputUserDeactivated, PeerIdInvalid, UserIsBot):
                 await users_col.delete_one({"user_id": user["user_id"]})
@@ -466,7 +466,7 @@ async def broadcast_handler(client, message: Message):
                 logger.error(f"Error broadcasting to {user['user_id']}: {e}")
 
             if i % 10 == 0:
-                await safe_api_call(status_message.edit_text(
+                await safe_api_call(lambda: status_message.edit_text(
                     f"📢 Broadcast in progress...\n\n"
                     f"👥 Total Users: {total_users}\n"
                     f"✅ Sent: {sent_count}\n"
@@ -502,9 +502,9 @@ async def send_log_file(client, message: Message):
     log_file = "bot_log.txt"
     try:
         if not os.path.exists(log_file):
-            await safe_api_call(message.reply_text("Log file not found."))
+            await safe_api_call(lambda: message.reply_text("Log file not found."))
             return
-        reply = await safe_api_call(client.send_document(message.chat.id, log_file, caption="Here is the log file."))
+        reply = await safe_api_call(lambda: client.send_document(message.chat.id, log_file, caption="Here is the log file."))
         bot.loop.create_task(auto_delete_message(message, reply))
     except Exception as e:
         logger.error(f"Failed to send log file: {e}")
@@ -585,7 +585,7 @@ async def sd_command(client, message):
             [[InlineKeyboardButton("🎥 Trailer", url=trailer_url)]]) if trailer_url else None
         if poster_url and SEND_UPDATES:
             await safe_api_call(
-                client.send_photo(
+                lambda: client.send_photo(
                     UPDATE_CHANNEL_ID,
                     photo=poster_url,
                     caption=message_caption,
@@ -679,11 +679,11 @@ async def chatop_handler(client, message: Message):
                 if start > end:
                     await message.reply_text("❌ Start ID must be less than or equal to end ID.")
                     return
-                await safe_api_call(client.delete_messages(chat_id, list(range(start, end + 1))))
+                await safe_api_call(lambda: client.delete_messages(chat_id, list(range(start, end + 1))))
                 await message.reply_text(f"✅ Deleted messages in chat {chat_id}")
             else:
                 msg_id = int(msg_arg)
-                await safe_api_call(client.delete_messages(chat_id, msg_id))
+                await safe_api_call(lambda: client.delete_messages(chat_id, msg_id))
                 await message.reply_text(f"✅ Deleted message {msg_id} in chat {chat_id}")
         else:
             await message.reply_text("Invalid operation. Use 'send' or 'del'.")

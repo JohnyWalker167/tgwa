@@ -48,7 +48,7 @@ async def start_handler(client, message):
             if username:
                 log_msg += f"Username: @{username}\n"
             await safe_api_call(
-                bot.send_message(LOG_CHANNEL_ID, log_msg, parse_mode=enums.ParseMode.HTML)
+                lambda: bot.send_message(LOG_CHANNEL_ID, log_msg, parse_mode=enums.ParseMode.HTML)
             )
 
         # Blocked users
@@ -60,22 +60,22 @@ async def start_handler(client, message):
             token = message.command[1][6:]
             if await is_token_valid(token, user_id):
                 await authorize_user(user_id)
-                await safe_api_call(message.reply_text(
+                await safe_api_call(lambda: message.reply_text(
                     f"✅ User 🆔: <code>{user_id}</code> Authorised"
                 ))
 
                 await safe_api_call(
-                    bot.send_message(LOG_CHANNEL_ID, f"✅ Authorized: {user_link} (<code>{user_id}</code>)")
+                    lambda: bot.send_message(LOG_CHANNEL_ID, f"✅ Authorized: {user_link} (<code>{user_id}</code>)")
                 )
             else:
                 await safe_api_call(
-                    message.reply_text("❌ Invalid or expired access key. Please get a new one.")
+                    lambda: message.reply_text("❌ Invalid or expired access key. Please get a new one.")
                 )
             return
 
         # --- Check subscription ---
         if BACKUP_CHANNEL and not await is_user_subscribed(client, user_id):
-            reply = await safe_api_call(message.reply_text(
+            reply = await safe_api_call(lambda: message.reply_text(
                 text="Please join our updates channel to continue 😊",
                 reply_markup=InlineKeyboardMarkup(
                     [[InlineKeyboardButton("🔔 Join Updates", url=f"https://t.me/{BACKUP_CHANNEL}")]]
@@ -111,7 +111,7 @@ async def start_handler(client, message):
             "Sit tight — we’ll be in touch before you know it! 🚀"
         )
 
-        reply_msg = await safe_api_call(message.reply_text(
+        reply_msg = await safe_api_call(lambda: message.reply_text(
             welcome_text,
             quote=True,
             reply_markup=reply_markup
@@ -149,7 +149,7 @@ async def delete_service_messages(client, message):
 async def approve_join_request_handler(client, join_request):
     try:
         await client.approve_chat_join_request(join_request.chat.id, join_request.from_user.id)
-        await safe_api_call(bot.send_message(LOG_CHANNEL_ID, f"✅ Approved join request for {join_request.from_user.mention} in {join_request.chat.title}"))
+        await safe_api_call(lambda: bot.send_message(LOG_CHANNEL_ID, f"✅ Approved join request for {join_request.from_user.mention} in {join_request.chat.title}"))
     except (ChatAdminRequired, UserAlreadyParticipant) as e:
         logger.warning(f"Could not approve join request: {e}")
     except Exception as e:

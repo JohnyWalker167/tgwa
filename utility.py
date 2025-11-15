@@ -377,7 +377,7 @@ async def restore_tmdb_photos(bot, message, start_id=None):
 
             if poster_url and SEND_UPDATES:
                 await safe_api_call(
-                    bot.send_photo(
+                    lambda: bot.send_photo(
                         UPDATE_CHANNEL_ID,
                         photo=poster_url,
                         caption=message,
@@ -386,7 +386,7 @@ async def restore_tmdb_photos(bot, message, start_id=None):
                     )
                 )
             if (i + 1) % 10 == 0 or (i + 1) == total_docs:
-                await safe_api_call(status_message.edit_text(f"🔁 **Restoring TMDB info...** {i + 1}/{total_docs} processed."))
+                await safe_api_call(lambda: status_message.edit_text(f"🔁 **Restoring TMDB info...** {i + 1}/{total_docs} processed."))
         except Exception as e:
             logger.error(f"Error in restore_tmdb_photos for tmdb_id={tmdb_id}: {e}")
             continue
@@ -453,30 +453,40 @@ def remove_unwanted(caption):
 # =========================
 # Async/Bot Utilities
 # =========================
-async def safe_api_call(coro):
-    """Utility wrapper to add delay before every bot API call."""
-    try:
-        return await coro
-    except (UserIsBlocked, InputUserDeactivated, PeerIdInvalid, UserIsBot) as e:
-        raise e
-    except FloodWait as e:
-        await asyncio.sleep(e.value * 1.2)
-    except Exception as e:
-        logger.error(f"An error occurred during an API call: {e}")
-        return None
+async def safe_api_call(coro_factory, max_retries=3):
+    """Utility wrapper to add delay and retry for flood waits."""
+    retries = 0
+    while retries < max_retries:
+        try:
+            return await coro_factory()
+        except (UserIsBlocked, InputUserDeactivated, PeerIdInvalid, UserIsBot) as e:
+            raise e
+        except FloodWait as e:
+            retries += 1
+            if retries < max_retries:
+                sleep_duration = e.value * 1.2
+                logger.warning(f"FloodWait: Sleeping for {sleep_duration:.2f} seconds before retrying. Attempt {retries}/{max_retries}")
+                await asyncio.sleep(sleep_duration)
+            else:
+                logger.error(f"FloodWait limit reached after {max_retries} attempts. Giving up. {e}")
+                return None
+        except Exception as e:
+            logger.error(f"An error occurred during an API call: {e}")
+            return None
+    return None
 
 async def delete_after_delay(client, channel_id, message_id, delay=AUTO_DELETE_SECONDS):
     await asyncio.sleep(delay)
     try:
-        await safe_api_call(client.delete_messages(channel_id, message_id))
+        await safe_api_call(lambda: client.delete_messages(channel_id, message_id))
     except Exception as e:
         logger.error(f"Failed to auto delete message: {e}")
 
 async def auto_delete_message(user_message, bot_message):
     try:        
         await asyncio.sleep(AUTO_DELETE_SECONDS)
-        await safe_api_call(user_message.delete())
-        await safe_api_call(bot_message.delete())
+        await safe_api_call(lambda: user_message.delete())
+        await safe_api_call(lambda: bot_message.delete())
     except Exception as e:
         pass
 
@@ -517,7 +527,7 @@ async def handle_duplicate_file(bot, file_info):
     if existing:
         telegram_link = generate_c_link(file_info["channel_id"], file_info["message_id"])
         await safe_api_call(
-            bot.send_message(
+            lambda: bot.send_message(
                 LOG_CHANNEL_ID,
                 f"⚠️ Duplicate File.\nLink: {telegram_link}",
                 parse_mode=enums.ParseMode.HTML
@@ -562,7 +572,7 @@ async def process_tmdb_info(bot, file_info):
             result = await get_movie_id(title, year)
 
         if not result:
-            await safe_api_call(bot.send_message(LOG_CHANNEL_ID, f"TMDB Info not found for <code>{title}</code>"))
+            await safe_api_call(lambda: bot.send_message(LOG_CHANNEL_ID, f"TMDB Info not found for <code>{title}</code>"))
             return None
           
         tmdb_id, tmdb_type = result['id'], result['media_type']
@@ -593,7 +603,7 @@ async def process_tmdb_info(bot, file_info):
 
             if poster_url and SEND_UPDATES:
                 await safe_api_call(
-                    bot.send_photo(
+                    lambda: bot.send_photo(
                         UPDATE_CHANNEL_ID,
                         photo=poster_url,
                         caption=message,
@@ -643,7 +653,7 @@ async def queue_file_for_processing(message, channel_id=None, reply_func=None, d
             await file_queue.put((file_info, reply_func, message, duplicate))
     except Exception as e:
         if reply_func:
-            await safe_api_call(reply_func(f"❌ Error queuing file: {e}"))
+            await safe_api_call(lambda: reply_func(f"❌ Error queuing file: {e}"))
 
 async def delete_expired_auth_users():
     """

@@ -144,7 +144,7 @@ async def add_tmdb_entry(data: dict, admin_id: int = Depends(get_current_admin))
             ) if trailer_url else None
             
             result = await safe_api_call(
-                bot.send_photo(
+                lambda: bot.send_photo(
                     UPDATE_CHANNEL_ID,
                     photo=poster_url,
                     caption=message_text,
