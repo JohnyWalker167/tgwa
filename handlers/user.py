@@ -96,8 +96,8 @@ async def start_handler(client, message):
         if short_link:
             buttons.append([InlineKeyboardButton("🗝️ Verify", url=short_link)])
         
-        #if CF_DOMAIN:
-        #    buttons.append([InlineKeyboardButton("Website", url=CF_DOMAIN)])
+        if CF_DOMAIN:
+            buttons.append([InlineKeyboardButton("🕸️ Website", url=CF_DOMAIN)])
 
         if buttons:
             reply_markup = InlineKeyboardMarkup(buttons)
