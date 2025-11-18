@@ -68,92 +68,62 @@ async def del_file_handler(client, message):
         await message.reply_text(f"An error occurred: {e}")
 
 @bot.on_message(filters.command("copy") & filters.private & filters.user(OWNER_ID))
-async def copy_file_handler(client, message):
+async def fast_copy_ids(client, message):
     try:
         if len(message.command) != 4:
-            await message.reply_text("<b>Usage:</b> /copy <start_link> <end_link> <dest_link>")
-            return
+            return await message.reply_text("Usage: /copy <start_link> <end_link> <dest_link>")
 
         start_link, end_link, dest_link = message.command[1], message.command[2], message.command[3]
 
-        try:
-            source_channel_id, start_msg_id = extract_channel_and_msg_id(start_link)
-            end_source_channel_id, end_msg_id = extract_channel_and_msg_id(end_link)
-            dest_channel_id, _ = extract_channel_and_msg_id(dest_link)
-        except ValueError as e:
-            await message.reply_text(f"⚠️ <b>Invalid Link:</b> {e}")
-            return
+        src_chat, start_id = extract_channel_and_msg_id(start_link)
+        end_chat, end_id = extract_channel_and_msg_id(end_link)
+        dest_chat, _ = extract_channel_and_msg_id(dest_link)
 
-        if source_channel_id != end_source_channel_id:
-            return await message.reply_text("⚠️ <b>Start and end links must be from the same channel.</b>")
+        if src_chat != end_chat:
+            return await message.reply_text("Start & end must be from same channel.")
 
-        if source_channel_id == dest_channel_id:
-            return await message.reply_text("⚠️ <b>Source and destination channels must be different.</b>")
-
-        start_id = min(start_msg_id, end_msg_id)
-        end_id = max(start_msg_id, end_msg_id)
+        start_id, end_id = sorted([start_id, end_id])
         total = end_id - start_id + 1
 
-        status_msg = await message.reply_text(
-            f"🔁 <b>Copying messages from ID <code>{start_id}</code> to <code>{end_id}</code>...</b>\n"
-            f"📦 <i>Total messages to check: {total}</i>"
-        )
+        status = await message.reply(f"Copying {total} messages...")
 
-        count = 0
+        copied = 0
         failed = 0
 
-        async with bot.copy_lock:
-            for idx, msg_id in enumerate(range(start_id, end_id + 1), start=1):
-                try:
-                    msg = await safe_api_call(lambda: client.get_messages(source_channel_id, msg_id))
-                    if not msg:
-                        continue
+        # process 100 messages per batch
+        for batch_start in range(start_id, end_id + 1, 100):
+            batch_ids = list(range(batch_start, min(batch_start + 100, end_id + 1)))
 
-                    media = msg.document or msg.video or msg.audio
-                    if not media:
-                        continue
+            try:
+                messages = await safe_api_call(lambda: client.get_messages(src_chat, batch_ids))
+            except:
+                continue  # if entire batch fails, skip
 
-                    caption = msg.caption or getattr(media, "file_name", "No Caption")
-                    caption = remove_unwanted(caption)
-                    await asyncio.sleep(3)
-                    copied_msg = await safe_api_call(lambda: client.copy_message(
-                        chat_id=dest_channel_id,
-                        from_chat_id=source_channel_id,
-                        message_id=msg_id,
-                        caption=f"<b>{caption}</b>"
-                    ))
-
-                    count += 1
-
-#                    if copied_msg:
-#                        await queue_file_for_processing(
-#                            copied_msg,
-#                            channel_id=dest_channel_id,
-#                            reply_func=message.reply_text,
-#                            duplicate=True
-#                        )
-
-                    if idx % 10 == 0 or idx == total:
-                        await safe_api_call(lambda: status_msg.edit_text(
-                            f"🔁 <b>Copying in progress...</b>\n"
-                            f"✅ <b>{count}</b> files copied so far.\n"
-                            f"📂 <i>{idx}/{total} messages checked</i>"
-                        ))
-
-                except Exception as copy_error:
-                    failed += 1
-                    logger.warning(f"[copy_file_handler] Failed to copy message {msg_id}: {copy_error}")
+            for msg in messages:
+                if not msg or not msg.media:
                     continue
 
-        await safe_api_call(lambda: status_msg.edit_text(
-            f"✅ <b>Copy completed!</b>\n\n"
-            f"📦 <b>Total files copied:</b> {count}\n"
-            f"❌ <b>Failed to copy:</b> {failed}\n"
-            f"📂 <i>Total messages checked:</i> {total}"
-        ))
+                try:
+                    await safe_api_call(lambda: msg.copy(dest_chat))
+                    copied += 1
+                except:
+                    failed += 1
+
+            await safe_api_call(lambda: status.edit_text(
+                f"Copied: {copied}\n"
+                f"Failed: {failed}\n"
+                f"Checked: {batch_ids[-1] - start_id + 1}/{total}"
+            ))
+
+        await status.edit_text(
+            f"✅ Copy completed\n"
+            f"✔ Copied: {copied}\n"
+            f"✖ Failed: {failed}\n"
+            f"📦 Total: {total}"
+        )
+
     except Exception as e:
-        logger.error(f"[copy_file_handler] Error: {e}")
-        await message.reply_text("❌ <b>An error occurred during the copy process.</b>")
+        await message.reply_text(f"Error: {e}")
 
 async def watch_queue(reply, total_files):
     last_message = ""
