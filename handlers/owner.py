@@ -124,13 +124,13 @@ async def copy_file_handler(client, message):
 
                     count += 1
 
-                    if copied_msg:
-                        await queue_file_for_processing(
-                            copied_msg,
-                            channel_id=dest_channel_id,
-                            reply_func=message.reply_text,
-                            duplicate=True
-                        )
+#                    if copied_msg:
+#                        await queue_file_for_processing(
+#                            copied_msg,
+#                            channel_id=dest_channel_id,
+#                            reply_func=message.reply_text,
+#                            duplicate=True
+#                        )
 
                     if idx % 10 == 0 or idx == total:
                         await safe_api_call(lambda: status_msg.edit_text(
