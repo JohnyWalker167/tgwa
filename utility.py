@@ -364,18 +364,19 @@ async def restore_tmdb_photos(bot, message, start_id=None):
             poster_path = info.get('poster_path')
             trailer_url = info.get('trailer_url')
             message_caption = info.get('message')
-            name = info.get('title')
-            year = info.get('year')
-            rating = info.get('rating')
-            plot = info.get("plot")
-            imdb_id = info.get("imdb_id")
-            await upsert_tmdb_info(tmdb_id, tmdb_type, poster_path, name, year, rating, plot, trailer_url, imdb_id)
+#            name = info.get('title')
+#            year = info.get('year')
+#            rating = info.get('rating')
+#            plot = info.get("plot")
+#            imdb_id = info.get("imdb_id")
+#            await upsert_tmdb_info(tmdb_id, tmdb_type, poster_path, name, year, rating, plot, trailer_url, imdb_id)
 
             keyboard = InlineKeyboardMarkup(
                 [[InlineKeyboardButton("🎥 Trailer", url=trailer_url)]]
             ) if trailer_url else None
 
             if poster_url and SEND_UPDATES:
+                await asyncio.sleep(3)
                 await safe_api_call(
                     lambda: bot.send_photo(
                         UPDATE_CHANNEL_ID,
