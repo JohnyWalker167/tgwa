@@ -68,62 +68,92 @@ async def del_file_handler(client, message):
         await message.reply_text(f"An error occurred: {e}")
 
 @bot.on_message(filters.command("copy") & filters.private & filters.user(OWNER_ID))
-async def fast_copy_ids(client, message):
+async def copy_file_handler(client, message):
     try:
         if len(message.command) != 4:
-            return await message.reply_text("Usage: /copy <start_link> <end_link> <dest_link>")
+            await message.reply_text("<b>Usage:</b> /copy <start_link> <end_link> <dest_link>")
+            return
 
         start_link, end_link, dest_link = message.command[1], message.command[2], message.command[3]
 
-        src_chat, start_id = extract_channel_and_msg_id(start_link)
-        end_chat, end_id = extract_channel_and_msg_id(end_link)
-        dest_chat, _ = extract_channel_and_msg_id(dest_link)
+        try:
+            source_channel_id, start_msg_id = extract_channel_and_msg_id(start_link)
+            end_source_channel_id, end_msg_id = extract_channel_and_msg_id(end_link)
+            dest_channel_id, _ = extract_channel_and_msg_id(dest_link)
+        except ValueError as e:
+            await message.reply_text(f"⚠️ <b>Invalid Link:</b> {e}")
+            return
 
-        if src_chat != end_chat:
-            return await message.reply_text("Start & end must be from same channel.")
+        if source_channel_id != end_source_channel_id:
+            return await message.reply_text("⚠️ <b>Start and end links must be from the same channel.</b>")
 
-        start_id, end_id = sorted([start_id, end_id])
+        if source_channel_id == dest_channel_id:
+            return await message.reply_text("⚠️ <b>Source and destination channels must be different.</b>")
+
+        start_id = min(start_msg_id, end_msg_id)
+        end_id = max(start_msg_id, end_msg_id)
         total = end_id - start_id + 1
 
-        status = await message.reply(f"Copying {total} messages...")
-
-        copied = 0
-        failed = 0
-
-        # process 100 messages per batch
-        for batch_start in range(start_id, end_id + 1, 100):
-            batch_ids = list(range(batch_start, min(batch_start + 100, end_id + 1)))
-
-            try:
-                messages = await safe_api_call(lambda: client.get_messages(src_chat, batch_ids))
-            except:
-                continue  # if entire batch fails, skip
-
-            for msg in messages:
-                if not msg or not msg.media:
-                    continue
-
-                try:
-                    await safe_api_call(lambda: msg.copy(dest_chat))
-                    copied += 1
-                except:
-                    failed += 1
-
-            await safe_api_call(lambda: status.edit_text(
-                f"Copied: {copied}\n"
-                f"Failed: {failed}\n"
-                f"Checked: {batch_ids[-1] - start_id + 1}/{total}"
-            ))
-
-        await status.edit_text(
-            f"✅ Copy completed\n"
-            f"✔ Copied: {copied}\n"
-            f"✖ Failed: {failed}\n"
-            f"📦 Total: {total}"
+        status_msg = await message.reply_text(
+            f"🔁 <b>Copying messages from ID <code>{start_id}</code> to <code>{end_id}</code>...</b>\n"
+            f"📦 <i>Total messages to check: {total}</i>"
         )
 
+        count = 0
+        failed = 0
+
+        async with bot.copy_lock:
+            for idx, msg_id in enumerate(range(start_id, end_id + 1), start=1):
+                try:
+                    msg = await safe_api_call(lambda: client.get_messages(source_channel_id, msg_id))
+                    if not msg:
+                        continue
+
+                    media = msg.document or msg.video or msg.audio
+                    if not media:
+                        continue
+
+                    caption = msg.caption or getattr(media, "file_name", "No Caption")
+                    caption = remove_unwanted(caption)
+                    
+                    copied_msg = await safe_api_call(lambda: client.copy_message(
+                        chat_id=dest_channel_id,
+                        from_chat_id=source_channel_id,
+                        message_id=msg_id,
+                        caption=f"<b>{caption}</b>"
+                    ))
+
+                    count += 1
+
+#                    if copied_msg:
+#                        await queue_file_for_processing(
+#                            copied_msg,
+#                            channel_id=dest_channel_id,
+#                            reply_func=message.reply_text,
+#                            duplicate=True
+#                        )
+
+                    if idx % 10 == 0 or idx == total:
+                        await safe_api_call(lambda: status_msg.edit_text(
+                            f"🔁 <b>Copying in progress...</b>\n"
+                            f"✅ <b>{count}</b> files copied so far.\n"
+                            f"📂 <i>{idx}/{total} messages checked</i>"
+                        ))
+
+                except Exception as copy_error:
+                    failed += 1
+                    logger.warning(f"[copy_file_handler] Failed to copy message {msg_id}: {copy_error}")
+                    continue
+
+        await safe_api_call(lambda: status_msg.edit_text(
+            f"✅ <b>Copy completed!</b>\n\n"
+            f"📦 <b>Total files copied:</b> {count}\n"
+            f"❌ <b>Failed to copy:</b> {failed}\n"
+            f"📂 <i>Total messages checked:</i> {total}"
+        ))
     except Exception as e:
-        await message.reply_text(f"Error: {e}")
+        logger.error(f"[copy_file_handler] Error: {e}")
+        await message.reply_text("❌ <b>An error occurred during the copy process.</b>")
 
 async def watch_queue(reply, total_files):
     last_message = ""
@@ -520,95 +550,6 @@ async def stats_command(client, message: Message):
         bot.loop.create_task(auto_delete_message(message, reply))
     except Exception as e:
         logger.error(f"Error in stats_command: {e}")
-
-@bot.on_message(filters.private & filters.command("sd") & filters.user(OWNER_ID))
-async def sd_command(client, message):
-    try:
-        args = message.text.split(maxsplit=3)
-        if len(args) < 3:
-            await message.reply_text("Usage: /sd <tmdb_link> <start_link> [end_link]")
-            return
-
-        tmdb_link = args[1]
-        start_link = args[2]
-        end_link = args[3] if len(args) > 3 else None
-
-        try:
-            tmdb_type, tmdb_id = await extract_tmdb_link(tmdb_link)
-        except ValueError as e:
-            await message.reply_text(f"Invalid TMDB link: {e}")
-            return
-
-        info = await get_info(tmdb_type, tmdb_id)
-        poster_url = info.get('poster_url')
-        poster_path = info.get('poster_path')
-        trailer_url = info.get('trailer_url')
-        message_caption = info.get('message')
-        name = info.get('title')
-        year = info.get('year')
-        rating = info.get('rating')
-        plot = info.get("plot")
-        imdb_id = info.get("imdb_id")
-        await upsert_tmdb_info(tmdb_id, tmdb_type, poster_path, name, year, rating, plot, trailer_url, imdb_id)
-
-        keyboard = InlineKeyboardMarkup(
-            [[InlineKeyboardButton("🎥 Trailer", url=trailer_url)]]) if trailer_url else None
-        if poster_url and SEND_UPDATES:
-            await safe_api_call(
-                lambda: client.send_photo(
-                    UPDATE_CHANNEL_ID,
-                    photo=poster_url,
-                    caption=message_caption,
-                    parse_mode=enums.ParseMode.HTML,
-                    reply_markup=keyboard
-                )
-            )
-
-        if end_link:
-            # Batch update
-            try:
-                start_channel_id, start_msg_id = extract_channel_and_msg_id(start_link)
-                end_channel_id, end_msg_id = extract_channel_and_msg_id(end_link)
-            except ValueError as e:
-                await message.reply_text(f"Invalid Telegram link: {e}")
-                return
-
-            if start_channel_id != end_channel_id:
-                await message.reply_text("Start and end links must be from the same channel.")
-                return
-
-            if start_msg_id > end_msg_id:
-                start_msg_id, end_msg_id = end_msg_id, start_msg_id
-
-            result = await files_col.update_many(
-                {
-                    "channel_id": start_channel_id,
-                    "message_id": {"$gte": start_msg_id, "$lte": end_msg_id}
-                },
-                {"$set": {"tmdb_id": tmdb_id, "tmdb_type": tmdb_type}}
-            )
-            await message.reply_text(f"✅ Successfully added {result.modified_count} files with TMDB ID {tmdb_id} ({tmdb_type}).")
-        else:
-            # Single file update
-            try:
-                channel_id, msg_id = extract_channel_and_msg_id(start_link)
-            except ValueError as e:
-                await message.reply_text(f"Invalid Telegram link: {e}")
-                return
-
-            result = await files_col.update_one(
-                {"channel_id": channel_id, "message_id": msg_id},
-                {"$set": {"tmdb_id": tmdb_id, "tmdb_type": tmdb_type}}
-            )
-            if result.modified_count > 0:
-                await message.reply_text(f"✅ Successfully added 1 file with TMDB ID {tmdb_id} ({tmdb_type}).")
-            else:
-                await message.reply_text("No file found to update.")
-
-    except Exception as e:
-        logger.error(f"Error in sd_command: {e}")
-        await message.reply_text(f"An error occurred: {e}")
-
         
 @bot.on_message(filters.command("op") & filters.chat(LOG_CHANNEL_ID))
 async def chatop_handler(client, message: Message):
@@ -703,25 +644,3 @@ async def unblock_user_handler(client, message: Message):
         logger.error(f"Error in unblock_user_handler: {e}")
         await message.reply_text(f"❌ Failed to unblock user: {e}")
 
-@bot.on_message(filters.command("ap") & filters.private & filters.user(OWNER_ID))
-async def add_poster_handler(_, message: Message):
-    try:
-        args = message.text.split(maxsplit=2)
-        if len(args) < 3:
-            await message.reply_text("Usage: /addposter file_link poster_url")
-            return
-        file_link = args[1].strip()
-        channel_id, msg_id = extract_channel_and_msg_id(file_link)
-        poster_url = args[2].strip()
-
-        file_record = await files_col.find_one({"channel_id": channel_id, "message_id": msg_id})
-        if not file_record:
-            await message.reply_text("❌ No file record found with the provided link.")
-            return
-        await files_col.update_one(
-            {"channel_id": channel_id, "message_id": msg_id},
-            {"$set": {"poster_url": poster_url}}
-        )
-        await message.reply_text(f"✅ Poster URL added to file {file_record['file_name']}.")
-    except Exception as e:
-        await message.reply_text(f"❌ Failed to add poster URL: {e}")
