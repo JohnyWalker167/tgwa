@@ -132,7 +132,7 @@ async def copy_file_handler(client, message):
                     copied_msg = await safe_api_call(lambda: client.copy_message(
                         chat_id=dest_channel_id,
                         from_chat_id=source_channel_id,
-                        message_id=msg_id,
+                        message_id=msg.id,
                         caption=f"<b>{caption}</b>"
                     ))
                     count += 1
