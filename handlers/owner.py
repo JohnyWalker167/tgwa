@@ -129,6 +129,7 @@ async def copy_file_handler(client, message):
                 if msg.document or msg.video:
                     caption = msg.caption or getattr(media, "file_name")
                     caption = remove_unwanted(caption)
+                    await asyncio.sleep(3)
                     copied_msg = await safe_api_call(lambda: client.copy_message(
                         chat_id=dest_channel_id,
                         from_chat_id=source_channel_id,
