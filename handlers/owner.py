@@ -144,7 +144,7 @@ async def copy_file_handler(client, message):
 #                            reply_func=message.reply_text,
 #                            duplicate=True
 #                        )
-            await safe_api_call(lambda: reply.edit_text(f"🔁 <b>Copying in progress...</b> {count}/{total} files queued so far."))
+            await safe_api_call(lambda: reply.edit_text(f"🔁 <b>Copying in progress...</b> {count}/{total} files copied so far."))
 
         asyncio.create_task(watch_queue(reply, count))
     except Exception as e:
