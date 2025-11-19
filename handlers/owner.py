@@ -67,6 +67,20 @@ async def del_file_handler(client, message):
         logger.error(f"Error in del_file_handler: {e}")
         await message.reply_text(f"An error occurred: {e}")
 
+async def watch_queue(reply, total_files):
+    last_message = ""
+    while get_queue_size() > 0:
+        processed_files = total_files - get_queue_size()
+        current_message = f"🔁 <b>Processing files...</b> {processed_files}/{total_files} processed."
+        if last_message != current_message:
+            await safe_api_call(lambda: reply.edit_text(current_message))
+            last_message = current_message
+        await asyncio.sleep(10)
+
+    final_message = f"✅ <b>Indexing completed!</b> {total_files} files processed."
+    if last_message != final_message:
+        await safe_api_call(lambda: reply.edit_text(final_message))
+
 @bot.on_message(filters.command("copy") & filters.private & filters.user(OWNER_ID))
 async def copy_file_handler(client, message):
     try:
@@ -93,39 +107,35 @@ async def copy_file_handler(client, message):
         start_id = min(start_msg_id, end_msg_id)
         end_id = max(start_msg_id, end_msg_id)
         total = end_id - start_id + 1
+        channel_id = source_channel_id
+        
+        reply = await message.reply_text(f"🔁 <b>Copying files from <code>{start_id}</code> to <code>{end_id}</code>...</b>\n"
+                                       f"Total: {total}")
 
-        status_msg = await message.reply_text(
-            f"🔁 <b>Copying messages from ID <code>{start_id}</code> to <code>{end_id}</code>...</b>\n"
-            f"📦 <i>Total messages to check: {total}</i>"
-        )
-
+        batch_size = 50
         count = 0
-        failed = 0
+        for batch_start in range(start_id, end_id + 1, batch_size):
+            batch_end = min(batch_start + batch_size - 1, end_id)
+            ids = list(range(batch_start, batch_end + 1))
+            messages = []
+            try:
+                messages = await safe_api_call(lambda: client.get_messages(channel_id, ids))
+            except Exception as e:
+                logger.warning(f"Could not get messages in batch {batch_start}-{batch_end}: {e}")
 
-        async with bot.copy_lock:
-            for idx, msg_id in enumerate(range(start_id, end_id + 1), start=1):
-                try:
-                    msg = await safe_api_call(lambda: client.get_messages(source_channel_id, msg_id))
-                    if not msg:
-                        continue
-
-                    media = msg.document or msg.video or msg.audio
-                    if not media:
-                        continue
-
-                    caption = msg.caption or getattr(media, "file_name", "No Caption")
+            for msg in messages:
+                if not msg:
+                    continue
+                if msg.document or msg.video:
+                    caption = msg.caption or getattr(media, "file_name")
                     caption = remove_unwanted(caption)
-
-                    await asyncio.sleep(3)
                     copied_msg = await safe_api_call(lambda: client.copy_message(
                         chat_id=dest_channel_id,
                         from_chat_id=source_channel_id,
                         message_id=msg_id,
                         caption=f"<b>{caption}</b>"
                     ))
-
                     count += 1
-
 #                    if copied_msg:
 #                        await queue_file_for_processing(
 #                            copied_msg,
@@ -133,42 +143,12 @@ async def copy_file_handler(client, message):
 #                            reply_func=message.reply_text,
 #                            duplicate=True
 #                        )
+            await safe_api_call(lambda: reply.edit_text(f"🔁 <b>Copying in progress...</b> {count} files queued so far."))
 
-                    if idx % 10 == 0 or idx == total:
-                        await safe_api_call(lambda: status_msg.edit_text(
-                            f"🔁 <b>Copying in progress...</b>\n"
-                            f"✅ <b>{count}</b> files copied so far.\n"
-                            f"📂 <i>{idx}/{total} messages checked</i>"
-                        ))
-
-                except Exception as copy_error:
-                    failed += 1
-                    logger.warning(f"[copy_file_handler] Failed to copy message {msg_id}: {copy_error}")
-                    continue
-
-        await safe_api_call(lambda: status_msg.edit_text(
-            f"✅ <b>Copy completed!</b>\n\n"
-            f"📦 <b>Total files copied:</b> {count}\n"
-            f"❌ <b>Failed to copy:</b> {failed}\n"
-            f"📂 <i>Total messages checked:</i> {total}"
-        ))
+        asyncio.create_task(watch_queue(reply, count))
     except Exception as e:
-        logger.error(f"[copy_file_handler] Error: {e}")
-        await message.reply_text("❌ <b>An error occurred during the copy process.</b>")
-
-async def watch_queue(reply, total_files):
-    last_message = ""
-    while get_queue_size() > 0:
-        processed_files = total_files - get_queue_size()
-        current_message = f"🔁 <b>Processing files...</b> {processed_files}/{total_files} processed."
-        if last_message != current_message:
-            await safe_api_call(lambda: reply.edit_text(current_message))
-            last_message = current_message
-        await asyncio.sleep(10)
-
-    final_message = f"✅ <b>Indexing completed!</b> {total_files} files processed."
-    if last_message != final_message:
-        await safe_api_call(lambda: reply.edit_text(final_message))
+        logger.error(f"[index_channel_files] Error: {e}")
+        await message.reply_text("❌ <b>An error occurred during the indexing process.</b>")
 
 @bot.on_message(filters.command("index") & filters.private & filters.user(OWNER_ID))
 async def index_channel_files(client, message):
