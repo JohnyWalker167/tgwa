@@ -78,14 +78,14 @@ async def send_file_to_user(request: SendFileRequest, user_id: int = Depends(get
             message_id=message_id,
             protect_content=True
         )
-        
-        if user_id != OWNER_ID:
-            await auth_users_col.update_one(
+                    
+        await auth_users_col.update_one(
                 {"user_id": user_id},
                 {"$inc": {"file_count": 1}},
                 upsert=True
             )
 
+        logging.error(f"{user_id}: {channel_id} | {message_id}")
         return JSONResponse(content={"message": "File sent successfully"})
 
     except HTTPException:
@@ -112,7 +112,7 @@ async def api_authorize(request: Request):
             detail="Invalid User ID format.",
         )
 
-    if not await is_user_authorized(user_id):
+    if not await is_user_authorized(user_id) and user_id != OWNER_ID:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authorization required — please verify through the bot first.",
@@ -126,9 +126,6 @@ async def api_authorize(request: Request):
 async def get_user_me(user_id: int = Depends(get_current_user)):
     first_name = await get_user_firstname(user_id)
     return JSONResponse(content={"first_name": first_name})
-
-
-
 
 @api.get("/api/movies")
 async def get_movies(page: int = 1, search: str = None, category: str = None, sort: str = "year", user_id: int = Depends(get_current_user), tmdb_id: int = None, tmdb_type: str = None):

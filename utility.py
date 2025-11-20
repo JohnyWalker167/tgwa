@@ -182,8 +182,6 @@ async def authorize_user(user_id):
 
 async def is_user_authorized(user_id):
     """Check if a user is authorized."""
-    if user_id == OWNER_ID:
-      return True
     doc = await auth_users_col.find_one({"user_id": user_id})
     if not doc:
         return False
