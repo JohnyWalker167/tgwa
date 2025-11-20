@@ -126,9 +126,6 @@ async def start_handler(client, message):
 @bot.on_message(filters.channel & (filters.document | filters.video | filters.audio | filters.photo))
 async def channel_file_handler(client, message):
     try:
-        if message.chat.id not in TMDB_CHANNEL_ID:         
-            return
-
         allowed_channels = await get_allowed_channels()
         if message.chat.id not in allowed_channels:
             return
