@@ -112,7 +112,7 @@ async def api_authorize(request: Request):
             detail="Invalid User ID format.",
         )
 
-    if not await is_user_authorized(user_id) and user_id != OWNER_ID:
+    if not await is_user_authorized(user_id):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authorization required — please verify through the bot first.",
