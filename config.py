@@ -56,7 +56,7 @@ UPDATE_CHANNEL_ID = int(os.getenv('UPDATE_CHANNEL_ID', 0))
 UPDATE_CHANNEL_ID2 = int(os.getenv('UPDATE_CHANNEL_ID2', 0))
 TMDB_CHANNEL_ID = [int(x) for x in os.getenv('TMDB_CHANNEL_ID', '').replace(' ', '').split(',') if x]
 LOG_CHANNEL_ID = int(os.getenv('LOG_CHANNEL_ID'))
-BACKUP_CHANNEL = os.getenv('BACKUP_CHANNEL', '')
+BACKUP_CHANNEL_LINK = os.getenv('BACKUP_CHANNEL', '')
 SEND_UPDATES = os.getenv('SEND_UPDATES', 'True').lower() in ('true', '1', 't')
 
 MY_DOMAIN = os.getenv('MY_DOMAIN')

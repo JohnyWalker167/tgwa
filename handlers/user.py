@@ -5,7 +5,7 @@ from pyrogram import filters, enums
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.errors import ChatAdminRequired, UserAlreadyParticipant
 
-from config import LOG_CHANNEL_ID, BOT_USERNAME, BACKUP_CHANNEL, CF_DOMAIN, TMDB_CHANNEL_ID
+from config import LOG_CHANNEL_ID, BOT_USERNAME, BACKUP_CHANNEL_LINK, CF_DOMAIN, TMDB_CHANNEL_ID
 from utility import (
     add_user,
     is_token_valid,
@@ -74,11 +74,11 @@ async def start_handler(client, message):
             return
 
         # --- Check subscription ---
-        if BACKUP_CHANNEL and not await is_user_subscribed(client, user_id):
+        if BACKUP_CHANNEL_LINK and not await is_user_subscribed(client, user_id):
             reply = await safe_api_call(lambda: message.reply_text(
                 text="Please join our updates channel to continue 😊",
                 reply_markup=InlineKeyboardMarkup(
-                    [[InlineKeyboardButton("🔔 Join Updates", url=f"https://t.me/{BACKUP_CHANNEL}")]]
+                    [[InlineKeyboardButton("🔔 Join Updates", url=f"https://t.me/{BACKUP_CHANNEL_LINK}")]]
                 )
             ))
             bot.loop.create_task(auto_delete_message(message, reply))
