@@ -260,7 +260,7 @@ def get_token_link(token_id, bot_username):
 
 async def is_user_subscribed(client, user_id):
         """Check if a user is subscribed to backup channel."""
-        if not UPDATE_CHANNEL_ID:
+        if not BACKUP_CHANNEL_LINK:
             return True  # No backup channel configured, consider all subscribed
         try:
             member = await client.get_chat_member(UPDATE_CHANNEL_ID, user_id)
