@@ -78,7 +78,7 @@ async def start_handler(client, message):
             reply = await safe_api_call(lambda: message.reply_text(
                 text="Please join our updates channel to continue 😊",
                 reply_markup=InlineKeyboardMarkup(
-                    [[InlineKeyboardButton("🔔 Join Updates", url=f"https://t.me/{BACKUP_CHANNEL_LINK}")]]
+                    [[InlineKeyboardButton("🔔 Join Updates", url=f"{BACKUP_CHANNEL_LINK}")]]
                 )
             ))
             bot.loop.create_task(auto_delete_message(message, reply))
