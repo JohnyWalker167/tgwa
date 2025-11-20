@@ -77,7 +77,7 @@ async def watch_queue(reply, total_files):
             last_message = current_message
         await asyncio.sleep(10)
 
-    final_message = f"✅ <b>Indexing completed!</b> {total_files} files processed."
+    final_message = f"✅ <b>Process completed!</b> {total_files} files processed."
     if last_message != final_message:
         await safe_api_call(lambda: reply.edit_text(final_message))
 
@@ -137,13 +137,13 @@ async def copy_file_handler(client, message):
                         caption=f"<b>{caption}</b>"
                     ))
                     count += 1
-#                    if copied_msg:
-#                        await queue_file_for_processing(
-#                            copied_msg,
-#                            channel_id=dest_channel_id,
-#                            reply_func=message.reply_text,
-#                            duplicate=True
-#                        )
+                    if copied_msg:
+                        await queue_file_for_processing(
+                            copied_msg,
+                            channel_id=dest_channel_id,
+                            reply_func=message.reply_text,
+                            duplicate=True
+                        )
             await safe_api_call(lambda: reply.edit_text(f"🔁 <b>Copying in progress...</b> {count}/{total} files copied so far."))
 
         asyncio.create_task(watch_queue(reply, count))
