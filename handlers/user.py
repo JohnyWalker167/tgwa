@@ -74,7 +74,7 @@ async def start_handler(client, message):
             return
 
         # --- Check subscription ---
-        if BACKUP_CHANNEL_LINK and not await is_user_subscribed(client, user_id):
+        if not await is_user_subscribed(client, user_id):
             reply = await safe_api_call(lambda: message.reply_text(
                 text="Please join our updates channel to continue 😊",
                 reply_markup=InlineKeyboardMarkup(
