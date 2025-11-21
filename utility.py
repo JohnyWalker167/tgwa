@@ -563,6 +563,12 @@ async def process_tmdb_info(bot, file_info):
         parsed_data = PTN.parse(title)
         title = parsed_data.get("title", "").replace("_", " ").replace("-", " ").replace(":", " ")
         title = ' '.join(title.split())
+        # Handle "A K A" or "A.K.A" in filenames by taking the part after it
+        aka_pattern = r'\sA[.\s]?K[.\s]?A[.]?\s+'
+        if re.search(aka_pattern, title, re.IGNORECASE):
+            # Split and take the last part, which is the title after "aka"
+            title = re.split(aka_pattern, title, maxsplit=1, flags=re.IGNORECASE)[-1].strip()
+
         year = parsed_data.get("year")
         season = parsed_data.get("season")
         episode = parsed_data.get("episode")
