@@ -527,6 +527,7 @@ async def handle_duplicate_file(bot, file_info):
   
     if existing:
         telegram_link = generate_c_link(file_info["channel_id"], file_info["message_id"])
+        await asyncio.sleep(3)
         await safe_api_call(
             lambda: bot.send_message(
                 LOG_CHANNEL_ID,
