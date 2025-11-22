@@ -513,7 +513,7 @@ async def extract_tmdb_link(tmdb_url):
 # Queue System for File Processing
 # =========================
 
-file_queue = asyncio.Queue()
+file_queue = asyncio.PriorityQueue()
 
 def get_queue_size():
     """Returns the current size of the file processing queue."""
@@ -563,11 +563,11 @@ async def process_tmdb_info(bot, file_info):
         parsed_data = PTN.parse(title)
         title = parsed_data.get("title", "").replace("_", " ").replace("-", " ").replace(":", " ")
         title = ' '.join(title.split())
-        # Handle "A K A" or "A.K.A" in filenames by taking the part after it
+        # Handle "A K A" or "A.K.A" in filenames by taking the part before it
         aka_pattern = r'\sA[.\s]?K[.\s]?A[.]?\s+'
         if re.search(aka_pattern, title, re.IGNORECASE):
-            # Split and take the last part, which is the title after "aka"
-            title = re.split(aka_pattern, title, maxsplit=1, flags=re.IGNORECASE)[-1].strip()
+            # Split and take the first part, which is the title before "aka"
+            title = re.split(aka_pattern, title, maxsplit=1, flags=re.IGNORECASE)[0].strip()
 
         year = parsed_data.get("year")
         season = parsed_data.get("season")
@@ -609,6 +609,7 @@ async def process_tmdb_info(bot, file_info):
             await upsert_tmdb_info(tmdb_id, tmdb_type, poster_path, name, year, rating, plot, trailer_url, imdb_id)
 
             if poster_url and SEND_UPDATES:
+                await asyncio.sleep(3)
                 await safe_api_call(
                     lambda: bot.send_photo(
                         UPDATE_CHANNEL_ID,
@@ -628,7 +629,7 @@ async def process_tmdb_info(bot, file_info):
 
 async def file_queue_worker(bot):
     while True:
-        item = await file_queue.get()
+        _priority, item = await file_queue.get()
         file_info, _, message, duplicate = item
         try:
             if duplicate and await handle_duplicate_file(bot, file_info):
@@ -657,7 +658,8 @@ async def queue_file_for_processing(message, channel_id=None, reply_func=None, d
     try:            
         file_info = extract_file_info(message, channel_id=channel_id)
         if file_info["file_name"]:
-            await file_queue.put((file_info, reply_func, message, duplicate))
+            item = (file_info, reply_func, message, duplicate)
+            await file_queue.put((message.id, item))
     except Exception as e:
         if reply_func:
             await safe_api_call(lambda: reply_func(f"❌ Error queuing file: {e}"))
