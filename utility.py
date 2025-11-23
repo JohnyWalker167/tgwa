@@ -580,6 +580,7 @@ async def process_tmdb_info(bot, file_info):
             result = await get_movie_id(title, year)
 
         if not result:
+            await asyncio.sleep(3)
             await safe_api_call(lambda: bot.send_message(LOG_CHANNEL_ID, f"TMDB Info not found for <code>{title}</code>"))
             return None
           
