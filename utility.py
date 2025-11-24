@@ -580,9 +580,31 @@ async def process_tmdb_info(bot, file_info):
             result = await get_movie_id(title, year)
 
         if not result:
-            await asyncio.sleep(3)
-            await safe_api_call(lambda: bot.send_message(LOG_CHANNEL_ID, f"TMDB Info not found for <code>{title}</code>"))
-            return None
+            # TMDB info not found, use a static dummy ID
+            dummy_tmdb_id = "TMDD_NOT_FOUND"
+            dummy_tmdb_type = "unknown"
+            
+            # Add these dummy identifiers to the file_info dict. 
+            file_info['tmdb_id'] = dummy_tmdb_id
+            file_info['tmdb_type'] = dummy_tmdb_type
+            
+            # Check if the static dummy entry exists. If not, create it.
+            exists = await tmdb_col.find_one({"tmdb_id": dummy_tmdb_id, "tmdb_type": dummy_tmdb_type})
+            
+            if not exists:
+                await tmdb_col.insert_one({
+                    "tmdb_id": dummy_tmdb_id,
+                    "tmdb_type": dummy_tmdb_type,
+                    "title": "TMDB Info Not Found",
+                    "poster_path": None,
+                    "year": None,
+                    "rating": None,
+                    "plot": "This is a placeholder for files where TMDB info could not be found automatically. Please edit the corresponding file entry to link it to the correct TMDB ID.",
+                    "trailer_url": None,
+                    "imdb_id": None
+                })
+            
+            return dummy_tmdb_id, dummy_tmdb_type
           
         tmdb_id, tmdb_type = result['id'], result['media_type']
 

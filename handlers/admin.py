@@ -1,4 +1,5 @@
 import re
+import re
 from fastapi import APIRouter, Depends, HTTPException, Header, status
 from db import tmdb_col, files_col
 from utility import is_user_authorized, build_search_pipeline, safe_api_call, upsert_tmdb_info, upload_to_imgbb
@@ -71,34 +72,49 @@ async def get_tmdb_entries(admin_id: int = Depends(get_current_admin), page: int
     }
 
 @router.get("/files")
-async def get_files(admin_id: int = Depends(get_current_admin), page: int = 1, search: str = None):
+async def get_files(admin_id: int = Depends(get_current_admin), page: int = 1, search: str = None, tmdb_id: str = None):
     page_size = 10
     skip = (page - 1) * page_size
-    
+    query = {}
+
+    if tmdb_id:
+        try:
+            # Try to convert to int for numeric TMDB IDs
+            query["tmdb_id"] = int(tmdb_id)
+        except ValueError:
+            # Keep as string for non-numeric IDs like "TMDD_NOT_FOUND"
+            query["tmdb_id"] = tmdb_id
+
     if search:
         sanitized_search = bot.sanitize_query(search)
-        pipeline = build_search_pipeline(sanitized_search, {}, skip, page_size)
-        result = await files_col.aggregate(pipeline).to_list(length=None)
-        files_data = result[0]['results'] if result and 'results' in result[0] else []
-        files = []
-        for file in files_data:
-            files.append({
-                "id": str(file.get("_id")),
-                "file_name": file.get("file_name"),
-                "tmdb_id": file.get("tmdb_id"),
-                "poster_url": file.get("poster_url")
-            })
-        total_files = result[0]['totalCount'][0]['total'] if result and 'totalCount' in result[0] and result[0]['totalCount'] else 0
+        # Note: Atlas Search and regex filtering don't easily mix.
+        # This approach prioritizes TMDB ID filtering over Atlas Search when both are provided.
+        # A more complex aggregation pipeline would be needed to combine them perfectly.
+        if "tmdb_id" in query:
+             query["file_name"] = {"$regex": re.escape(sanitized_search), "$options": "i"}
+             files_cursor = files_col.find(query).sort("_id", -1).skip(skip).limit(page_size)
+             total_files = await files_col.count_documents(query)
+             files_data = await files_cursor.to_list(length=page_size)
+
+        else:
+             pipeline = build_search_pipeline(sanitized_search, {}, skip, page_size)
+             result = await files_col.aggregate(pipeline).to_list(length=None)
+             files_data = result[0]['results'] if result and 'results' in result[0] else []
+             total_files = result[0]['totalCount'][0]['total'] if result and 'totalCount' in result[0] and result[0]['totalCount'] else 0
+
     else:
-        files = []
-        async for file in files_col.find().sort("_id", -1).skip(skip).limit(page_size):
-            files.append({
-                "id": str(file.get("_id")),
-                "file_name": file.get("file_name"),
-                "tmdb_id": file.get("tmdb_id"),
-                "poster_url": file.get("poster_url")            
-            })
-        total_files = await files_col.count_documents({})
+        files_cursor = files_col.find(query).sort("_id", -1).skip(skip).limit(page_size)
+        total_files = await files_col.count_documents(query)
+        files_data = await files_cursor.to_list(length=page_size)
+
+    files = []
+    for file in files_data:
+        files.append({
+            "id": str(file.get("_id")),
+            "file_name": file.get("file_name"),
+            "tmdb_id": file.get("tmdb_id"),
+            "poster_url": file.get("poster_url")
+        })
         
     total_pages = (total_files + page_size - 1) // page_size
     
@@ -160,14 +176,26 @@ async def add_tmdb_entry(data: dict, admin_id: int = Depends(get_current_admin))
     return {"status": "success"}
 
 @router.delete("/tmdb/{tmdb_id}/{tmdb_type}")
-async def delete_tmdb_entry(tmdb_id: int, tmdb_type: str, admin_id: int = Depends(get_current_admin)):
-    await tmdb_col.delete_one({"tmdb_id": tmdb_id, "tmdb_type": tmdb_type})
-    await files_col.update_many({"tmdb_id": tmdb_id, "tmdb_type": tmdb_type}, {"$unset": {"tmdb_id": "", "tmdb_type": ""}})
+async def delete_tmdb_entry(tmdb_id: str, tmdb_type: str, admin_id: int = Depends(get_current_admin)):
+    # Convert to int if possible, otherwise keep as string
+    try:
+        tmdb_id_converted = int(tmdb_id)
+    except ValueError:
+        tmdb_id_converted = tmdb_id
+        
+    await tmdb_col.delete_one({"tmdb_id": tmdb_id_converted, "tmdb_type": tmdb_type})
+    await files_col.update_many({"tmdb_id": tmdb_id_converted, "tmdb_type": tmdb_type}, {"$unset": {"tmdb_id": "", "tmdb_type": ""}})
     invalidate_cache()
     return {"status": "success"}
 
 @router.put("/tmdb/{tmdb_id}/{tmdb_type}")
-async def update_tmdb_entry(tmdb_id: int, tmdb_type: str, data: dict, admin_id: int = Depends(get_current_admin)):
+async def update_tmdb_entry(tmdb_id: str, tmdb_type: str, data: dict, admin_id: int = Depends(get_current_admin)):
+    # Convert to int if possible, otherwise keep as string
+    try:
+        tmdb_id_converted = int(tmdb_id)
+    except ValueError:
+        tmdb_id_converted = tmdb_id
+
     rating_str = data.get("rating")
     if rating_str == "":
         rating = None
@@ -184,7 +212,7 @@ async def update_tmdb_entry(tmdb_id: int, tmdb_type: str, data: dict, admin_id: 
         "year": data.get("year"),
         "poster_path": data.get("poster_path")
     }
-    await tmdb_col.update_one({"tmdb_id": tmdb_id, "tmdb_type": tmdb_type}, {"$set": update_data})
+    await tmdb_col.update_one({"tmdb_id": tmdb_id_converted, "tmdb_type": tmdb_type}, {"$set": update_data})
     invalidate_cache()
     return {"status": "success"}
 
