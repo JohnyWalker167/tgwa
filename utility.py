@@ -519,22 +519,23 @@ def get_queue_size():
     """Returns the current size of the file processing queue."""
     return file_queue.qsize()
 
-async def handle_duplicate_file(bot, file_info):
-    """Checks for duplicate files and logs if found."""
-    existing = await files_col.find_one({
-        "file_name": file_info["file_name"]
-    })
-  
+async def handle_duplicate_file(bot, file_info, log_duplicate: bool):
+    """Checks for duplicate files and logs if requested."""
+    existing = await files_col.find_one({"file_name": file_info["file_name"]})
+
     if existing:
-        telegram_link = generate_c_link(file_info["channel_id"], file_info["message_id"])
-        await asyncio.sleep(3)
-        await safe_api_call(
-            lambda: bot.send_message(
-                LOG_CHANNEL_ID,
-                f"⚠️ Duplicate File.\nLink: {telegram_link}",
-                parse_mode=enums.ParseMode.HTML
+        if log_duplicate:
+            telegram_link = generate_c_link(
+                file_info["channel_id"], file_info["message_id"]
             )
-        )
+            await asyncio.sleep(3)
+            await safe_api_call(
+                lambda: bot.send_message(
+                    LOG_CHANNEL_ID,
+                    f"⚠️ Duplicate File.\nLink: {telegram_link}",
+                    parse_mode=enums.ParseMode.HTML,
+                )
+            )
         return True
     return False
 
@@ -580,31 +581,36 @@ async def process_tmdb_info(bot, file_info):
             result = await get_movie_id(title, year)
 
         if not result:
-            # TMDB info not found, use a static dummy ID
-            dummy_tmdb_id = "TMDD_NOT_FOUND"
-            dummy_tmdb_type = "unknown"
-            
-            # Add these dummy identifiers to the file_info dict. 
-            file_info['tmdb_id'] = dummy_tmdb_id
-            file_info['tmdb_type'] = dummy_tmdb_type
-            
-            # Check if the static dummy entry exists. If not, create it.
-            exists = await tmdb_col.find_one({"tmdb_id": dummy_tmdb_id, "tmdb_type": dummy_tmdb_type})
-            
+            # TMDB info not found, use a specific movie as a placeholder
+            placeholder_tmdb_id = 970286
+            placeholder_tmdb_type = "movie"
+
+            # Add these placeholder identifiers to the file_info dict.
+            file_info["tmdb_id"] = placeholder_tmdb_id
+            file_info["tmdb_type"] = placeholder_tmdb_type
+
+            # Check if the placeholder entry exists. If not, create it by fetching from TMDB.
+            exists = await tmdb_col.find_one(
+                {"tmdb_id": placeholder_tmdb_id, "tmdb_type": placeholder_tmdb_type}
+            )
+
             if not exists:
-                await tmdb_col.insert_one({
-                    "tmdb_id": dummy_tmdb_id,
-                    "tmdb_type": dummy_tmdb_type,
-                    "title": "TMDB Info Not Found",
-                    "poster_path": None,
-                    "year": None,
-                    "rating": None,
-                    "plot": "This is a placeholder for files where TMDB info could not be found automatically. Please edit the corresponding file entry to link it to the correct TMDB ID.",
-                    "trailer_url": None,
-                    "imdb_id": None
-                })
-            
-            return dummy_tmdb_id, dummy_tmdb_type
+                # Fetch details for the placeholder movie
+                info = await get_info(placeholder_tmdb_type, placeholder_tmdb_id)
+                if info and not ("message" in info and info["message"].startswith("Error")):
+                    await upsert_tmdb_info(
+                        placeholder_tmdb_id,
+                        placeholder_tmdb_type,
+                        info.get("poster_path"),
+                        info.get("title"),
+                        info.get("year"),
+                        info.get("rating"),
+                        info.get("plot"),
+                        info.get("trailer_url"),
+                        info.get("imdb_id"),
+                    )
+
+            return placeholder_tmdb_id, placeholder_tmdb_type
           
         tmdb_id, tmdb_type = result['id'], result['media_type']
 
@@ -654,9 +660,9 @@ async def process_tmdb_info(bot, file_info):
 async def file_queue_worker(bot):
     while True:
         _priority, item = await file_queue.get()
-        file_info, _, message, duplicate = item
+        file_info, _, message, log_duplicate = item
         try:
-            if duplicate and await handle_duplicate_file(bot, file_info):
+            if await handle_duplicate_file(bot, file_info, log_duplicate):
                 continue
 
             # Process TMDB info and get the result
@@ -678,11 +684,13 @@ async def file_queue_worker(bot):
 # Unified File Queueing
 # =========================
 
-async def queue_file_for_processing(message, channel_id=None, reply_func=None, duplicate=True):
-    try:            
+async def queue_file_for_processing(
+    message, channel_id=None, reply_func=None, log_duplicates=True
+):
+    try:
         file_info = extract_file_info(message, channel_id=channel_id)
         if file_info["file_name"]:
-            item = (file_info, reply_func, message, duplicate)
+            item = (file_info, reply_func, message, log_duplicates)
             await file_queue.put((message.id, item))
     except Exception as e:
         if reply_func:
