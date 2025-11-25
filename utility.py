@@ -76,6 +76,8 @@ async def upload_to_imgbb(image_url):
 
 TOKEN_VALIDITY_SECONDS = 24 * 60 * 60  # 24 hours
 AUTO_DELETE_SECONDS = 2 * 60
+PLACEHOLDER_TMDB_ID = 970286
+PLACEHOLDER_TMDB_TYPE = "movie"
 
 logger = logging.getLogger(__name__)
 
@@ -584,25 +586,21 @@ async def process_tmdb_info(bot, file_info):
 
         if not result:
             # TMDB info not found, use a specific movie as a placeholder
-            placeholder_tmdb_id = 970286
-            placeholder_tmdb_type = "movie"
-
-            # Add these placeholder identifiers to the file_info dict.
-            file_info["tmdb_id"] = placeholder_tmdb_id
-            file_info["tmdb_type"] = placeholder_tmdb_type
+            file_info["tmdb_id"] = PLACEHOLDER_TMDB_ID
+            file_info["tmdb_type"] = PLACEHOLDER_TMDB_TYPE
 
             # Check if the placeholder entry exists. If not, create it by fetching from TMDB.
             exists = await tmdb_col.find_one(
-                {"tmdb_id": placeholder_tmdb_id, "tmdb_type": placeholder_tmdb_type}
+                {"tmdb_id": PLACEHOLDER_TMDB_ID, "tmdb_type": PLACEHOLDER_TMDB_TYPE}
             )
 
             if not exists:
                 # Fetch details for the placeholder movie
-                info = await get_info(placeholder_tmdb_type, placeholder_tmdb_id)
+                info = await get_info(PLACEHOLDER_TMDB_TYPE, PLACEHOLDER_TMDB_ID)
                 if info and not ("message" in info and info["message"].startswith("Error")):
                     await upsert_tmdb_info(
-                        placeholder_tmdb_id,
-                        placeholder_tmdb_type,
+                        PLACEHOLDER_TMDB_ID,
+                        PLACEHOLDER_TMDB_TYPE,
                         info.get("poster_path"),
                         info.get("title"),
                         info.get("year"),
@@ -612,7 +610,7 @@ async def process_tmdb_info(bot, file_info):
                         info.get("imdb_id"),
                     )
 
-            return placeholder_tmdb_id, placeholder_tmdb_type
+            return PLACEHOLDER_TMDB_ID, PLACEHOLDER_TMDB_TYPE
           
         tmdb_id, tmdb_type = result['id'], result['media_type']
 

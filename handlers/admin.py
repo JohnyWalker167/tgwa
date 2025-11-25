@@ -2,7 +2,7 @@ import re
 import re
 from fastapi import APIRouter, Depends, HTTPException, Header, status
 from db import tmdb_col, files_col
-from utility import is_user_authorized, build_search_pipeline, safe_api_call, upsert_tmdb_info, upload_to_imgbb
+from utility import is_user_authorized, build_search_pipeline, safe_api_call, upsert_tmdb_info, upload_to_imgbb, PLACEHOLDER_TMDB_ID, PLACEHOLDER_TMDB_TYPE
 from config import OWNER_ID, SEND_UPDATES, UPDATE_CHANNEL_ID
 from tmdb import get_info
 from app import bot
@@ -184,7 +184,7 @@ async def delete_tmdb_entry(tmdb_id: str, tmdb_type: str, admin_id: int = Depend
         tmdb_id_converted = tmdb_id
         
     await tmdb_col.delete_one({"tmdb_id": tmdb_id_converted, "tmdb_type": tmdb_type})
-    await files_col.update_many({"tmdb_id": tmdb_id_converted, "tmdb_type": tmdb_type}, {"$unset": {"tmdb_id": "", "tmdb_type": ""}})
+    await files_col.update_many({"tmdb_id": tmdb_id_converted, "tmdb_type": tmdb_type}, {"$set": {"tmdb_id": PLACEHOLDER_TMDB_ID, "tmdb_type": PLACEHOLDER_TMDB_TYPE}})
     invalidate_cache()
     return {"status": "success"}
 
