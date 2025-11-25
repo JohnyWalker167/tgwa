@@ -68,7 +68,7 @@ async def send_file_to_user(request: SendFileRequest, user_id: int = Depends(get
 
         channel_id = file.get("channel_id")
         message_id = file.get("message_id")
-
+        filename = file.get("file_name")
         if not channel_id or not message_id:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="File metadata is incomplete")
 
@@ -76,6 +76,7 @@ async def send_file_to_user(request: SendFileRequest, user_id: int = Depends(get
             chat_id=user_id,
             from_chat_id=channel_id,
             message_id=message_id,
+            caption=f"<b>{filename}</b>"
             protect_content=True
         )
                     
