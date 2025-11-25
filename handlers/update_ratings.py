@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 import asyncio
-import os
 import logging
-import aiohttp
 from motor.motor_asyncio import AsyncIOMotorClient
-from dotenv import load_dotenv
+from tmdb import get_info
+from config import MONGO_URI, TMDB_API_KEY
 
 # Configure logging
 logging.basicConfig(
@@ -14,69 +13,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-load_dotenv('config.env', override=True)
-
-async def get_info(tmdb_type, tmdb_id, api_key):
-    """
-    Fetch detailed TMDB info for one movie/show.
-    """
-    base_url = "https://api.themoviedb.org/3"
-    api_url = f"{base_url}/{tmdb_type}/{tmdb_id}?api_key={api_key}&language=en-US"
-    video_url = f"{base_url}/{tmdb_type}/{tmdb_id}/videos?api_key={api_key}"
-
-    try:
-        async with aiohttp.ClientSession() as session:
-
-            # --- Details ---
-            async with session.get(api_url) as detail_response:
-                if detail_response.status != 200:
-                    return {"message": f"Error: TMDB returned HTTP {detail_response.status}"}
-
-                data = await detail_response.json()
-
-            message, title, rating, release_year, plot, imdb_id = await format_tmdb_info(
-                tmdb_type, tmdb_id, data
-            )
-
-            poster_path = data.get("poster_path")
-            poster_url = (
-                f"https://image.tmdb.org/t/p/original{poster_path}"
-                if poster_path else None
-            )
-
-            # --- Trailer ---
-            async with session.get(video_url) as video_response:
-                video_data = await video_response.json()
-
-            trailer_url = None
-            for video in video_data.get("results", []):
-                if video["site"] == "YouTube" and video["type"] == "Trailer":
-                    trailer_url = f"https://www.youtube.com/watch?v={video['key']}"
-                    break
-
-            return {
-                "message": message,
-                "poster_url": poster_url,
-                "poster_path": poster_path,
-                "title": title,
-                "rating": rating,
-                "year": release_year,
-                "plot": plot,
-                "trailer_url": trailer_url,
-                "imdb_id": imdb_id,
-            }
-
-    except Exception as e:
-        logger.error(f"Error fetching TMDB data: {e}")
-        return {"message": f"Error: {str(e)}"}
-
-
 async def main():
     """
     Main function to find and update TMDB documents with missing ratings.
     """
-    mongo_uri = os.getenv("MONGO_URI")
-    tmdb_api_key = os.getenv("TMDB_API_KEY")
+    mongo_uri = MONGO_URI
+    tmdb_api_key = TMDB_API_KEY
 
     if not mongo_uri or not tmdb_api_key:
         logger.error("MONGO_URI and TMDB_API_KEY environment variables must be set.")
@@ -84,8 +26,8 @@ async def main():
 
     try:
         client = AsyncIOMotorClient(mongo_uri)
-        db = client.get_default_database()
-        tmdb_col = db.tmdb_col
+        db = client["sharing_bot"]
+        tmdb_col = db["tmdb"]
         logger.info("Successfully connected to the database.")
     except Exception as e:
         logger.error(f"Failed to connect to the database: {e}")
@@ -114,7 +56,7 @@ async def main():
                 logger.info(
                     f"({i+1}/{total_docs}) Fetching info for {tmdb_type}/{tmdb_id}..."
                 )
-                info = await get_info(tmdb_type, tmdb_id, tmdb_api_key)
+                info = await get_info(tmdb_type, tmdb_id)
 
                 if info and not info.get("message", "").startswith("Error"):
                     update_data = {
