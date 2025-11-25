@@ -76,7 +76,7 @@ async def send_file_to_user(request: SendFileRequest, user_id: int = Depends(get
             chat_id=user_id,
             from_chat_id=channel_id,
             message_id=message_id,
-            caption=f"<b>{filename}</b>"
+            caption=f"<b>{filename}</b>",
             protect_content=True
         )
                     
