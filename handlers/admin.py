@@ -184,7 +184,7 @@ async def delete_tmdb_entry(tmdb_id: str, tmdb_type: str, admin_id: int = Depend
         tmdb_id_converted = tmdb_id
         
     await tmdb_col.delete_one({"tmdb_id": tmdb_id_converted, "tmdb_type": tmdb_type})
-    await files_col.update_many({"tmdb_id": tmdb_id_converted, "tmdb_type": tmdb_type}, {"$unset": {"tmdb_id": "", "tmdb_type": ""}})
+    await files_col.update_many({"tmdb_id": tmdb_id_converted, "tmdb_type": tmdb_type}, {"$unset": {"tmdb_id": 970286, "tmdb_type": "movie"}})
     invalidate_cache()
     return {"status": "success"}
 
