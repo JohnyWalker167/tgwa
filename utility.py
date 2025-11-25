@@ -387,11 +387,11 @@ async def restore_tmdb_photos(bot, message, start_id=None):
                     )
                 )
             if (i + 1) % 10 == 0 or (i + 1) == total_docs:
-                await safe_api_call(lambda: status_message.edit_text(f"🔁 **Restoring TMDB info...** {i + 1}/{total_docs} processed."))
+                await safe_api_call(lambda: status_message.edit_text(f"🔁 <b>Restoring TMDB info...</b> {i + 1}/{total_docs} processed."))
         except Exception as e:
             logger.error(f"Error in restore_tmdb_photos for tmdb_id={tmdb_id}: {e}")
             continue
-    await status_message.edit_text(f"✅ **Restore completed!** {total_docs} records processed.")
+    await status_message.edit_text(f"✅ <b>Restore completed!</b> {total_docs} records processed.")
 
 
 def extract_file_info(message, channel_id=None):
