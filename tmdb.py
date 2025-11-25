@@ -128,17 +128,17 @@ async def get_info(tmdb_type, tmdb_id):
         async with aiohttp.ClientSession() as session:
             async with session.get(api_url) as detail_response:
                 data = await detail_response.json()
-                async with session.get(image_url) as movie_response:
-                    images = await movie_response.json()
+                #async with session.get(image_url) as movie_response:
+                #    images = await movie_response.json()
                 message, title, rating, release_year, plot, imdb_id = await format_tmdb_info(tmdb_type, tmdb_id, data)
 
                 poster_path = data.get('poster_path', None)
-                if 'backdrops' in images and images['backdrops']:
-                    backdrop_path = images['backdrops'][0]['file_path']
-                else:
-                    backdrop_path = None
-                path = backdrop_path or poster_path
-                poster_url = f"https://image.tmdb.org/t/p/original{path}" if path else None
+                #if 'backdrops' in images and images['backdrops']:
+                #    backdrop_path = images['backdrops'][0]['file_path']
+                #else:
+                #    backdrop_path = None
+                #path = backdrop_path or poster_path
+                poster_url = f"https://image.tmdb.org/t/p/original{poster_path}" if poster_path else None
 
                 video_url = f'https://api.themoviedb.org/3/{tmdb_type}/{tmdb_id}/videos?api_key={TMDB_API_KEY}'
                 async with session.get(video_url) as video_response:
@@ -149,7 +149,7 @@ async def get_info(tmdb_type, tmdb_id):
                             trailer_url = f"https://www.youtube.com/watch?v={video['key']}"
                             break
 
-                return {"message": message, "poster_url": poster_url, "poster_path": path, 
+                return {"message": message, "poster_url": poster_url, "poster_path": poster_path, 
                         "title": title, "rating": rating, "year": release_year, "plot": plot, "trailer_url": trailer_url, "imdb_id": imdb_id}
     except aiohttp.ClientError as e:
         logger.error(f"Error fetching TMDB data: {e}")
