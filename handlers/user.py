@@ -129,9 +129,9 @@ async def channel_file_handler(client, message):
         allowed_channels = await get_allowed_channels()
         if message.chat.id not in allowed_channels:
             return
-            
-        await queue_file_for_processing(message)
-        await file_queue.join()
+
+        asyncio.create_task(queue_file_for_processing(message))
+
     except Exception as e:
         logger.error(f"Error in channel_file_handler: {e}")
 
