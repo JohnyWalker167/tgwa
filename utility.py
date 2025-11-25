@@ -381,7 +381,7 @@ async def restore_tmdb_photos(bot, message, start_id=None):
                     lambda: bot.send_photo(
                         UPDATE_CHANNEL_ID,
                         photo=poster_url,
-                        caption=message,
+                        caption=message_caption,
                         parse_mode=enums.ParseMode.HTML,
                         reply_markup=keyboard
                     )
