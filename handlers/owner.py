@@ -142,7 +142,7 @@ async def copy_file_handler(client, message):
                             copied_msg,
                             channel_id=dest_channel_id,
                             reply_func=message.reply_text,
-                            duplicate=True
+                            log_duplicates=True,
                         )
                 await asyncio.sleep(3)
             await safe_api_call(lambda: reply.edit_text(f"🔁 <b>Copying in progress...</b> {count}/{total} files copied so far."))
@@ -161,7 +161,7 @@ async def index_channel_files(client, message):
             return
 
         start_link, end_link = args[1], args[2]
-        dup = len(args) == 4 and args[3].lower() == "dup"
+        log_duplicates = len(args) == 4 and args[3].lower() == "dup"
 
         try:
             start_channel_id, start_msg_id = extract_channel_and_msg_id(start_link)
@@ -183,8 +183,10 @@ async def index_channel_files(client, message):
         start_id = min(start_msg_id, end_msg_id)
         end_id = max(start_msg_id, end_msg_id)
 
-        reply = await message.reply_text(f"🔁 <b>Indexing files from <code>{start_id}</code> to <code>{end_id}</code>...</b>\n"
-                                       f"Duplicates allowed: {dup}")
+        reply = await message.reply_text(
+            f"🔁 <b>Indexing files from <code>{start_id}</code> to <code>{end_id}</code>...</b>\n"
+            f"Logging duplicates: {log_duplicates}"
+        )
 
         batch_size = 50
         count = 0
@@ -205,7 +207,7 @@ async def index_channel_files(client, message):
                         msg,
                         channel_id=channel_id,
                         reply_func=reply.edit_text,
-                        duplicate=dup
+                        log_duplicates=log_duplicates,
                     )
                     count += 1
             await safe_api_call(lambda: reply.edit_text(f"🔁 <b>Indexing in progress...</b> {count} files queued so far."))

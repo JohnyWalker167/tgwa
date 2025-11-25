@@ -519,22 +519,23 @@ def get_queue_size():
     """Returns the current size of the file processing queue."""
     return file_queue.qsize()
 
-async def handle_duplicate_file(bot, file_info):
-    """Checks for duplicate files and logs if found."""
-    existing = await files_col.find_one({
-        "file_name": file_info["file_name"]
-    })
-  
+async def handle_duplicate_file(bot, file_info, log_duplicate: bool):
+    """Checks for duplicate files and logs if requested."""
+    existing = await files_col.find_one({"file_name": file_info["file_name"]})
+
     if existing:
-        telegram_link = generate_c_link(file_info["channel_id"], file_info["message_id"])
-        await asyncio.sleep(3)
-        await safe_api_call(
-            lambda: bot.send_message(
-                LOG_CHANNEL_ID,
-                f"⚠️ Duplicate File.\nLink: {telegram_link}",
-                parse_mode=enums.ParseMode.HTML
+        if log_duplicate:
+            telegram_link = generate_c_link(
+                file_info["channel_id"], file_info["message_id"]
             )
-        )
+            await asyncio.sleep(3)
+            await safe_api_call(
+                lambda: bot.send_message(
+                    LOG_CHANNEL_ID,
+                    f"⚠️ Duplicate File.\nLink: {telegram_link}",
+                    parse_mode=enums.ParseMode.HTML,
+                )
+            )
         return True
     return False
 
@@ -654,9 +655,9 @@ async def process_tmdb_info(bot, file_info):
 async def file_queue_worker(bot):
     while True:
         _priority, item = await file_queue.get()
-        file_info, _, message, duplicate = item
+        file_info, _, message, log_duplicate = item
         try:
-            if duplicate and await handle_duplicate_file(bot, file_info):
+            if await handle_duplicate_file(bot, file_info, log_duplicate):
                 continue
 
             # Process TMDB info and get the result
@@ -678,11 +679,13 @@ async def file_queue_worker(bot):
 # Unified File Queueing
 # =========================
 
-async def queue_file_for_processing(message, channel_id=None, reply_func=None, duplicate=True):
-    try:            
+async def queue_file_for_processing(
+    message, channel_id=None, reply_func=None, log_duplicates=False
+):
+    try:
         file_info = extract_file_info(message, channel_id=channel_id)
         if file_info["file_name"]:
-            item = (file_info, reply_func, message, duplicate)
+            item = (file_info, reply_func, message, log_duplicates)
             await file_queue.put((message.id, item))
     except Exception as e:
         if reply_func:
