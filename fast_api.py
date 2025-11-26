@@ -86,7 +86,7 @@ async def send_file_to_user(request: SendFileRequest, user_id: int = Depends(get
                 upsert=True
             )
 
-        logging.error(f"{user_id}: {channel_id} | {message_id}")
+        logging.info(f"{user_id}: {channel_id} | {message_id}")
         return JSONResponse(content={"message": "File sent successfully"})
 
     except HTTPException:
