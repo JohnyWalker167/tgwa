@@ -261,6 +261,10 @@
                     <nav aria-label="Page navigation">
                         <ul id="pagination" class="pagination justify-content-center mt-4"></ul>
                     </nav>
+                    <div class="d-flex justify-content-center mt-2">
+                        <input type="number" id="page-input" class="form-control" style="width: 100px;" placeholder="Page">
+                        <button id="goto-page" class="btn btn-primary ms-2">Go</button>
+                    </div>
                 </div>
                 <div class="modal-footer text-center mt-3">
                     <button type="button" class="btn btn-danger close-btn" onclick="closeModal()">Close</button>
@@ -281,6 +285,7 @@
         const urlParams = new URLSearchParams(window.location.search);
         const tmdbId = urlParams.get('tmdb_id');
         const tmdbType = urlParams.get('tmdb_type');
+        let totalPages = 1;
 
         async function fetchWithAuth(url, options = {}) {
             loader.style.display = 'flex';
@@ -349,6 +354,7 @@
                 const response = await fetchWithAuth(`${API_BASE_URL}/api/details/${tmdbId}?tmdb_type=${tmdbType}&page=${page}`);
                 if (response.ok) {
                     const data = await response.json();
+                    totalPages = data.total_pages;
                     document.getElementById('modal-title').textContent = `Found ${data.total_files} results`;
                     displayFiles(data.files);
                     setupPagination(data.total_pages, data.current_page);
@@ -453,6 +459,23 @@
         }
 
         document.getElementById('view-files-btn').addEventListener('click', openModal);
+
+        const pageInput = document.getElementById('page-input');
+        const gotoPageBtn = document.getElementById('goto-page');
+
+        function goToPage() {
+            const page = parseInt(pageInput.value);
+            if (!isNaN(page) && page > 0 && page <= totalPages) {
+                fetchFiles(page);
+            }
+        }
+
+        gotoPageBtn.addEventListener('click', goToPage);
+        pageInput.addEventListener('keyup', (event) => {
+            if (event.key === 'Enter') {
+                goToPage();
+            }
+        });
 
         fetchAndRenderDetails();
     </script>

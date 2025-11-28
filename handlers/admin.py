@@ -232,3 +232,4 @@ async def delete_file(file_id: str, admin_id: int = Depends(get_current_admin)):
     await files_col.delete_one({"_id": ObjectId(file_id)})
     invalidate_cache()
     return {"status": "success"}
+ 

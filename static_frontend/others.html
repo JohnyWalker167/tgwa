@@ -14,13 +14,13 @@
 
         .file-grid {
             display: grid;
-            grid-template-columns: repeat(2, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 1rem;
         }
 
         @media (max-width: 600px) {
             .file-grid {
-                grid-template-columns: repeat(1, 1fr);
+                grid-template-columns: repeat(2, 1fr);
                 gap: 0.5rem;
             }
 
@@ -52,8 +52,8 @@
 
         .file-tile img {
             width: 100%;
-            height: 100%;
-            object-fit: cover;
+            height: auto;
+            object-fit: contain;
             display: block;
             transition: transform 0.3s;
         }
@@ -281,11 +281,11 @@
                 overlay.className = 'overlay';
 
                 // ✅ File name (with tooltip)
-                const fileName = document.createElement('div');
-                fileName.className = 'file-name';
-                fileName.textContent = file.file_name || 'Untitled';
-                fileName.title = file.file_name || 'Untitled';
-                overlay.appendChild(fileName);
+                // const fileName = document.createElement('div');
+                // fileName.className = 'file-name';
+                // fileName.textContent = file.file_name || 'Untitled';
+                // fileName.title = file.file_name || 'Untitled';
+                // overlay.appendChild(fileName);
 
                 // ✅ Details button
                 const detailsBtn = document.createElement('a');
