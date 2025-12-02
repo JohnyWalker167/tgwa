@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Media Library</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #141414;
+            color: #fff;
+        }
+
+        .file-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        @media (max-width: 600px) {
+            .file-grid {
+                grid-template-columns: repeat(1, 1fr);
+                gap: 0.5rem;
+            }
+
+            .file-tile {
+                border-radius: 5px;
+            }
+
+            #search-input {
+                width: 100% !important;
+            }
+
+            .d-flex.justify-content-between {
+                flex-direction: column;
+                align-items: stretch !important;
+            }
+
+            .d-flex.justify-content-between>* {
+                margin-bottom: 0.5rem;
+            }
+        }
+
+        .file-tile {
+            position: relative;
+            cursor: pointer;
+            border-radius: 10px;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .file-tile img {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            display: block;
+            transition: transform 0.3s;
+        }
+
+        .file-tile:hover img {
+            transform: scale(1.1);
+        }
+
+        .overlay {
+            position: absolute;
+            inset: 0;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            padding-bottom: 0.5rem;
+        }
+
+        .file-tile:hover .overlay {
+            opacity: 1;
+        }
+
+        .stream-btn {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+        }
+
+        .file-tile:hover .stream-btn {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .form-control {
+            background-color: #333;
+            color: #fff;
+            border: 1px solid #555;
+        }
+
+        .btn-blue {
+            background-color: #007bff;
+            color: #fff;
+        }
+
+        .btn-red {
+            background-color: #e50914;
+            color: #fff;
+        }
+
+        .btn-danger,
+        .btn-danger:focus {
+            background-color: #e50914 !important;
+            border-color: #e50914 !important;
+            box-shadow: none !important;
+        }
+
+        .btn-danger:hover {
+            background-color: #c40812 !important;
+            border-color: #c40812 !important;
+        }
+
+        .pagination .page-link {
+            background-color: #222;
+            border-color: #333;
+            color: #fff;
+        }
+
+        .pagination .page-item.active .page-link {
+            background-image: linear-gradient(to right, #e50914, #f40612);
+            border: none;
+        }
+
+        /* ---------- Loader ---------- */
+        .loader-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #e50914;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ---------- File name styling ---------- */
+        .file-name {
+            color: #fff;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-align: center;
+            margin-bottom: 0.3rem;
+            padding: 0 0.5rem;
+            width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            word-break: break-all;
+        }
+
+        /* On mobile, allow wrapping instead of ellipsis */
+        @media (max-width: 600px) {
+            .file-name {
+                white-space: normal;
+                word-break: break-all;
+                font-size: 0.8rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loader" class="loader-container">
+        <div class="loader"></div>
+    </div>
+
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 id="welcome-message">Welcome!</h1>
+            <input id="search-input" class="form-control w-50" type="search" placeholder="Search" aria-label="Search">
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-center gap-2 mb-4">
+            <button id="recent-btn" class="btn btn-danger">Sort by Recently Added</button>
+            <button id="oldest-btn" class="btn btn-outline-light">Sort by Oldest</button>
+        </div>
+
+        <div id="file-grid" class="file-grid"></div>
+
+        <nav aria-label="Page navigation">
+            <ul id="pagination" class="pagination justify-content-center mt-4"></ul>
+        </nav>
+
+        <div class="d-flex justify-content-center mt-2">
+            <input type="number" id="page-input" class="form-control" style="width: 100px;" placeholder="Page">
+            <button id="goto-page" class="btn btn-danger ms-2">Go</button>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        const loader = document.getElementById('loader');
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            window.location.href = 'login.html';
+        }
+
+        const authHeader = { 'Authorization': `Bearer ${token}` };
+        const searchInput = document.getElementById('search-input');
+        const pageInput = document.getElementById('page-input');
+        const gotoPageBtn = document.getElementById('goto-page');
+        let currentSort = 'recent';
+        let currentSearch = '';
+        let totalPages = 1;
+
+        function debounce(func, delay) {
+            let timeout;
+            return function (...args) {
+                const context = this;
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(context, args), delay);
+            };
+        }
+
+        async function fetchWithAuth(url, options = {}) {
+            loader.style.display = 'flex';
+            try {
+                const response = await fetch(url, { ...options, headers: { ...options.headers, ...authHeader } });
+                if (response.status === 401) {
+                    localStorage.removeItem('authToken');
+                    window.location.href = 'login.html';
+                }
+                return response;
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+
+        async function fetchFiles(page = 1, search = '', sort = 'recent') {
+            if (page < 1 || (page > totalPages && totalPages > 0)) return;
+            try {
+                const response = await fetchWithAuth(`${API_BASE_URL}/api/others?page=${page}&search=${search}&sort=${sort}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    totalPages = data.total_pages;
+                    displayFiles(data.files);
+                    setupPagination(data.total_pages, data.current_page, search, sort);
+                } else {
+                    console.error('Failed to fetch files');
+                }
+            } catch (error) {
+                console.error('Error fetching files:', error);
+            }
+        }
+
+        function displayFiles(files) {
+            const grid = document.getElementById('file-grid');
+            grid.innerHTML = '';
+            files.forEach(file => {
+                const tile = document.createElement('div');
+                tile.className = 'file-tile';
+
+                const img = document.createElement('img');
+                img.src = file.poster_url || 'https://i.ibb.co/qzmwLvx/No-Image-Available.jpg';
+                img.alt = 'Poster';
+                img.loading = 'lazy';
+                tile.appendChild(img);
+
+                const overlay = document.createElement('div');
+                overlay.className = 'overlay';
+
+                // ✅ File name (with tooltip)
+                const fileName = document.createElement('div');
+                fileName.className = 'file-name';
+                fileName.textContent = file.file_name || 'Untitled';
+                fileName.title = file.file_name || 'Untitled';
+                overlay.appendChild(fileName);
+
+                // ✅ Details button
+                const detailsBtn = document.createElement('a');
+                detailsBtn.href = `simple_details.html?file_id=${file._id}`;
+                detailsBtn.className = 'btn btn-red stream-btn';
+                detailsBtn.textContent = 'Details';
+                overlay.appendChild(detailsBtn);
+
+                tile.appendChild(overlay);
+                grid.appendChild(tile);
+            });
+        }
+
+        function setupPagination(totalPages, currentPage, search, sort) {
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+
+            if (currentPage > 1) {
+                const prev = document.createElement('li');
+                prev.className = 'page-item';
+                prev.innerHTML = `<a class="page-link" href="#" onclick="fetchFiles(${currentPage - 1}, '${search}', '${sort}')">Previous</a>`;
+                pagination.appendChild(prev);
+            }
+
+            for (let i = Math.max(1, currentPage - 1); i <= Math.min(totalPages, currentPage + 1); i++) {
+                const page = document.createElement('li');
+                page.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                page.innerHTML = `<a class="page-link" href="#" onclick="fetchFiles(${i}, '${search}', '${sort}')">${i}</a>`;
+                pagination.appendChild(page);
+            }
+
+            if (currentPage < totalPages) {
+                const next = document.createElement('li');
+                next.className = 'page-item';
+                next.innerHTML = `<a class="page-link" href="#" onclick="fetchFiles(${currentPage + 1}, '${search}', '${sort}')">Next</a>`;
+                pagination.appendChild(next);
+            }
+        }
+
+        function updateButtonStyles() {
+            document.getElementById('recent-btn').className = `btn ${currentSort === 'recent' ? 'btn-danger' : 'btn-outline-light'}`;
+            document.getElementById('oldest-btn').className = `btn ${currentSort === 'oldest' ? 'btn-danger' : 'btn-outline-light'}`;
+        }
+
+        const debouncedFetchFiles = debounce(fetchFiles, 1000);
+
+        searchInput.addEventListener('input', (e) => {
+            currentSearch = e.target.value;
+            debouncedFetchFiles(1, currentSearch, currentSort);
+        });
+
+        gotoPageBtn.addEventListener('click', () => {
+            const page = parseInt(pageInput.value);
+            if (!isNaN(page)) {
+                fetchFiles(page, searchInput.value, currentSort);
+            }
+        });
+
+        document.getElementById('recent-btn').addEventListener('click', () => {
+            currentSort = 'recent';
+            fetchFiles(1, searchInput.value, currentSort);
+            updateButtonStyles();
+        });
+
+        document.getElementById('oldest-btn').addEventListener('click', () => {
+            currentSort = 'oldest';
+            fetchFiles(1, searchInput.value, currentSort);
+            updateButtonStyles();
+        });
+
+        function loadStateFromDefaults() {
+            currentSearch = '';
+            currentSort = 'recent';
+            updateButtonStyles();
+        }
+
+        async function loadUser() {
+            try {
+                const response = await fetchWithAuth(`${API_BASE_URL}/api/user/me`);
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('welcome-message').textContent = `Welcome, ${data.first_name}!`;
+                }
+            } catch (error) {
+                console.error('Error fetching user info:', error);
+            }
+        }
+
+        loadUser();
+        loadStateFromDefaults();
+        fetchFiles(1, currentSearch, currentSort);
+    </script>
+</body>
+</html>

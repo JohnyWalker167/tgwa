@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        /* ---------- Base layout ---------- */
+        body {
+            font-family: "Inter", sans-serif;
+            background-color: #121212;
+            color: #f2f2f2;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+
+        h1,
+        h2 {
+            color: #e50914;
+            font-weight: 700;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        /* ---------- Lists ---------- */
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            background-color: #1f1f1f;
+            margin: 8px 0;
+            padding: 12px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            word-break: break-all;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        /* ---------- Buttons ---------- */
+        button {
+            background-color: #e50914;
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            margin-top: 6px;
+        }
+
+        button:hover {
+            background-color: #f40612;
+            transform: translateY(-1px);
+        }
+
+        button:disabled {
+            background-color: #444;
+            cursor: not-allowed;
+        }
+
+        /* ---------- Inputs & selects ---------- */
+        input,
+        select,
+        textarea {
+            width: 100%;
+            background-color: #1f1f1f;
+            color: #fff;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+
+        input::placeholder {
+            color: #bbb;
+        }
+
+        /* ---------- Loader ---------- */
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #e50914;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 15px auto;
+            display: none;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ---------- Modal ---------- */
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(2px);
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-y: auto;
+
+        }
+
+        .modal-content {
+            background: #1f1f1f;
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            max-width: 800px;
+            width: 90%;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+            display: flex;
+            flex-direction: column;
+            max-height: 90vh;
+        }
+
+        .modal h2 {
+            color: #e50914;
+            text-align: center;
+        }
+
+        #poster-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            overflow-y: auto;
+        }
+
+        #poster-grid img {
+            width: 100%;
+            max-width: 150px;
+            height: auto;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        #poster-grid img:hover {
+            transform: scale(1.05);
+        }
+
+        /* ---------- Responsive adjustments ---------- */
+        @media (max-width: 480px) {
+            .container {
+                padding: 10px;
+            }
+
+            button {
+                width: 100%;
+                margin-top: 8px;
+            }
+
+            li {
+                font-size: 14px;
+            }
+
+            #poster-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+
+            #poster-grid img {
+                width: 100%;
+                max-width: none;
+            }
+        }
+    </style>
+
+</head>
+
+<body>
+    <div class="container mt-3">
+        <div id="notification" style="display:none; position:fixed; top:20px; right:20px; padding:15px; border-radius:10px; color:white; font-weight:bold;"></div>
+        <h1>TMDB Management</h1>
+        <div id="loader" class="loader"></div>
+
+        <h2>TMDB Entries</h2>
+        <div class="d-flex justify-content-between">
+            <input type="search" id="tmdb-search" placeholder="Search by title" class="w-100">
+            <select id="tmdb-type-filter" class="ms-2">
+                <option value="">All</option>
+                <option value="movie">Movie</option>
+                <option value="tv">Series</option>
+            </select>
+        </div>
+        <ul id="tmdb-list"></ul>
+        <div class="d-flex justify-content-between">
+            <button id="tmdb-prev">Previous</button>
+            <button id="tmdb-next">Next</button>
+        </div>
+
+        <h2>Add TMDB Entry</h2>
+        <input type="number" id="tmdb-id" placeholder="TMDB ID">
+        <select id="tmdb-type">
+            <option value="movie">Movie</option>
+            <option value="tv">Series</option>
+        </select>
+        <div id="season-selection" style="display: none;">
+            <select id="season-select"></select>
+        </div>
+        <button onclick="addTmdbEntry()">Add</button>
+        <button onclick="sendAllToChannel()">Send All</button>
+
+        <h2>Files</h2>
+        <input type="search" id="file-search" placeholder="Search by filename">
+        <input type="search" id="file-tmdb-id-search" placeholder="Search by TMDB ID">
+        <div class="form-check mt-2">
+            <input class="form-check-input" type="checkbox" id="no-tmdb-id-filter">
+            <label class="form-check-label" for="no-tmdb-id-filter">
+                Only files with no TMDB ID
+            </label>
+        </div>
+        <select id="channel-filter" class="form-select mt-2">
+            <option value="">All Channels</option>
+        </select>
+        <ul id="files-list"></ul>
+        <div class="d-flex justify-content-between">
+            <button id="files-prev">Previous</button>
+            <button id="files-next">Next</button>
+        </div>
+
+        <!-- ---------- Modal ---------- -->
+
+        <div id="edit-modal" class="modal" style="display:none;">
+            <div class="modal-content">
+                <h2>Edit TMDB Entry</h2>
+                <input type="hidden" id="edit-tmdb-id">
+                <input type="hidden" id="edit-tmdb-type">
+                <label for="edit-title">Title:</label>
+                <input type="text" id="edit-title">
+                <label for="edit-rating">Rating:</label>
+                <input type="text" id="edit-rating">
+                <label for="edit-plot">Plot:</label>
+                <textarea id="edit-plot"></textarea>
+                <label for="edit-year">Year:</label>
+                <input type="text" id="edit-year">
+                <label for="edit-poster-path">Poster Path:</label>
+                <input type="text" id="edit-poster-path">
+                <div class="d-flex justify-content-between mt-3">
+                    <button onclick="updateTmdbEntry()">Save</button>
+                    <button onclick="closeModal()" style="background-color:#555;">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="edit-poster-modal" class="modal" style="display:none;">
+            <div class="modal-content">
+                <h2>Edit Poster URL</h2>
+                <input type="hidden" id="edit-file-id">
+                <label for="edit-poster-url">Poster URL:</label>
+                <input type="search" id="edit-poster-url">
+                <div class="d-flex justify-content-between mt-3">
+                    <button onclick="updateFilePoster()">Save</button>
+                    <button onclick="closePosterModal()" style="background-color:#555;">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        const loader = document.getElementById('loader');
+        let token = localStorage.getItem('authToken');
+        let tmdbCurrentPage = 1;
+        let filesCurrentPage = 1;
+        let tmdbSearchQuery = '';
+        let tmdbTypeFilter = '';
+        let fileSearchQuery = '';
+        let fileTmdbIdSearchQuery = '';
+        let noTmdbIdFilter = false;
+        let channelFilter = '';
+        const selectedFileIds = new Set();
+        let currentTmdbSelection = null;
+
+        // 👇 Debounce helper
+        function debounce(func, delay) {
+            let timeout;
+            return function(...args) {
+                const context = this;
+                clearTimeout(timeout);
+                timeout = setTimeout(() => func.apply(context, args), delay);
+            };
+        }
+
+        // 👇 Universal fetch helper
+        async function fetchWithAuth(url, options = {}) {
+            loader.style.display = 'block';
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(options.headers || {}),
+                        'Authorization': `Bearer ${token}`,
+                    },
+                });
+
+                if (response.status === 401) {
+                    localStorage.removeItem('authToken');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                return response;
+            } catch (err) {
+                console.error('Request failed:', err);
+                throw err;
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+
+        // ✅ Step 1: Verify authorization
+        async function verifyAuthorization() {
+            if (!token) {
+                // No token saved — go to login
+                window.location.href = 'login.html';
+                return;
+            }
+
+            try {
+                // Ask backend to authorize user
+                const res = await fetch(`${API_BASE_URL}/api/authorize`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: token }),
+                });
+
+                if (!res.ok) {
+                    // Invalid token → redirect to login
+                    localStorage.removeItem('authToken');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                // If valid, continue loading data
+                console.log("✅ Authorized successfully.");
+            } catch (err) {
+                console.error('Authorization failed:', err);
+                window.location.href = 'login.html';
+            }
+        }
+
+        // --------------------------
+        // TMDB Functions
+        // --------------------------
+        async function loadTmdbEntries() {
+            const response = await fetchWithAuth(`${API_BASE_URL}/api/admin/tmdb?page=${tmdbCurrentPage}&search=${tmdbSearchQuery}&tmdb_type=${tmdbTypeFilter}`);
+            if (!response || !response.ok) return;
+            const data = await response.json();
+            const list = document.getElementById('tmdb-list');
+            list.innerHTML = '';
+            data.entries.forEach(entry => {
+                const item = document.createElement('li');
+                item.textContent = `${entry.title} (${entry.type}) - ${entry.tmdb_id}`;
+                item.style.cursor = 'pointer';
+                item.onclick = () => {
+                    document.getElementById('tmdb-id').value = entry.tmdb_id;
+                    document.getElementById('tmdb-type').value = entry.type;
+                };
+
+                const sendButton = document.createElement('button');
+                sendButton.textContent = 'Send to Channel';
+                sendButton.onclick = () => sendToChannel(entry.tmdb_id, entry.type);
+                item.appendChild(sendButton);
+
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Delete';
+                deleteButton.onclick = () => deleteTmdbEntry(entry.tmdb_id, entry.type);
+                item.appendChild(deleteButton);
+
+                const editButton = document.createElement('button');
+                editButton.textContent = 'Edit';
+                editButton.onclick = () => openModal(entry);
+                item.appendChild(editButton);
+
+                list.appendChild(item);
+            });
+            document.getElementById('tmdb-prev').disabled = data.current_page === 1;
+            document.getElementById('tmdb-next').disabled = data.current_page === data.total_pages;
+        }
+
+        async function loadFiles() {
+            const response = await fetchWithAuth(`${API_BASE_URL}/api/admin/files?page=${filesCurrentPage}&search=${fileSearchQuery}&tmdb_id=${fileTmdbIdSearchQuery}&no_tmdb_id=${noTmdbIdFilter}&channel_id=${channelFilter}`);
+            if (!response || !response.ok) return;
+            const data = await response.json();
+            const list = document.getElementById('files-list');
+            list.innerHTML = '';
+            data.files.forEach(file => {
+                const item = document.createElement('li');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.dataset.fileId = file.id;
+                checkbox.checked = selectedFileIds.has(file.id);
+                checkbox.onchange = () => {
+                    if (checkbox.checked) {
+                        selectedFileIds.add(file.id);
+                    } else {
+                        selectedFileIds.delete(file.id);
+                    }
+                };
+                item.appendChild(checkbox);
+                item.append(` ${file.file_name} (${file.tmdb_id || 'No TMDB ID'})`);
+                
+                const editPosterButton = document.createElement('button');
+                editPosterButton.textContent = 'Edit Poster';
+                editPosterButton.onclick = () => openPosterModal(file);
+                item.appendChild(editPosterButton);
+
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Delete';
+                deleteButton.onclick = () => deleteFile(file.id);
+                item.appendChild(deleteButton);
+
+                list.appendChild(item);
+            });
+            document.getElementById('files-prev').disabled = data.current_page === 1;
+            document.getElementById('files-next').disabled = data.current_page === data.total_pages;
+        }
+
+        async function addTmdbEntry() {
+            const tmdbId = document.getElementById('tmdb-id').value;
+            const tmdbType = document.getElementById('tmdb-type').value;
+            const selectedFiles = Array.from(selectedFileIds);
+            const seasonNumber = document.getElementById('season-select').value;
+
+            const body = {
+                tmdb_id: tmdbId,
+                tmdb_type: tmdbType,
+                file_ids: selectedFiles,
+            };
+
+            if (tmdbType === 'tv') {
+                body.season_number = seasonNumber;
+            }
+
+            const response = await fetchWithAuth(`${API_BASE_URL}/api/admin/tmdb`, {
+                method: 'POST',
+                body: JSON.stringify(body)
+            });
+
+            if (response && response.ok) {
+                showNotification('TMDB entry added successfully!');
+                document.getElementById('tmdb-id').value = '';
+                selectedFileIds.clear();
+                loadTmdbEntries();
+                loadFiles();
+            } else {
+                showNotification('Failed to add TMDB entry.', true);
+            }
+        }
+
+        async function deleteTmdbEntry(tmdbId, tmdbType) {
+            if (!confirm('Are you sure you want to delete this TMDB entry?')) {
+                return;
+            }
+            const response = await fetchWithAuth(`${API_BASE_URL}/api/admin/tmdb/${tmdbId}/${tmdbType}`, { method: 'DELETE' });
+            if (response && response.ok) {
+                showNotification('TMDB entry deleted successfully!');
+                loadTmdbEntries();
+                loadFiles();
+            } else {
+                showNotification('Failed to delete TMDB entry.', true);
+            }
+        }
+
+        async function sendToChannel(tmdbId, tmdbType) {
+            const response = await fetchWithAuth(`${API_BASE_URL}/api/admin/tmdb/send`, {
+                method: 'POST',
+                body: JSON.stringify({ tmdb_id: tmdbId, tmdb_type: tmdbType })
+            });
+
+            if (response && response.ok) {
+                showNotification('Successfully sent to channel!');
+            } else {
+                showNotification('Failed to send to channel.', true);
+            }
+        }
+
+        async function sendAllToChannel() {
+            if (confirm('Are you sure you want to send all TMDB entries to the channel? This could take a while.')) {
+                const response = await fetchWithAuth(`${API_BASE_URL}/api/admin/tmdb/send-all`, {
+                    method: 'POST'
+                });
+                if (response && response.ok) {
+                    showNotification('Started sending all entries to the channel. This may take some time.');
+                } else {
+                    showNotification('Failed to start sending all entries.', true);
+                }
+            }
+        }
+
+        // --------------------------
+        // File Search
+        // --------------------------
+        const debouncedLoadFiles = debounce(loadFiles, 1000);
+        document.getElementById('file-search').addEventListener('input', (e) => {
+            fileSearchQuery = e.target.value;
+            filesCurrentPage = 1;
+            debouncedLoadFiles();
+        });
+
+        document.getElementById('file-tmdb-id-search').addEventListener('input', (e) => {
+            fileTmdbIdSearchQuery = e.target.value;
+            filesCurrentPage = 1;
+            debouncedLoadFiles();
+        });
+
+        document.getElementById('no-tmdb-id-filter').addEventListener('change', (e) => {
+            noTmdbIdFilter = e.target.checked;
+            filesCurrentPage = 1;
+            loadFiles();
+        });
+
+        document.getElementById('channel-filter').addEventListener('change', (e) => {
+            channelFilter = e.target.value;
+            filesCurrentPage = 1;
+            loadFiles();
+        });
+
+        const debouncedLoadTmdbEntries = debounce(loadTmdbEntries, 1000);
+        document.getElementById('tmdb-search').addEventListener('input', (e) => {
+            tmdbSearchQuery = e.target.value;
+            tmdbCurrentPage = 1;
+            debouncedLoadTmdbEntries();
+        });
+
+        document.getElementById('tmdb-type-filter').addEventListener('change', (e) => {
+            tmdbTypeFilter = e.target.value;
+            tmdbCurrentPage = 1;
+            loadTmdbEntries();
+        });
+
+        document.getElementById('tmdb-type').addEventListener('change', async (e) => {
+            const seasonSelection = document.getElementById('season-selection');
+            if (e.target.value === 'tv') {
+                seasonSelection.style.display = 'block';
+                const tmdbId = document.getElementById('tmdb-id').value;
+                if (tmdbId) {
+                    await loadSeasons(tmdbId);
+                }
+            } else {
+                seasonSelection.style.display = 'none';
+            }
+        });
+
+        async function loadSeasons(tmdbId) {
+            const response = await fetchWithAuth(`${API_BASE_URL}/api/admin/tmdb/${tmdbId}/tv`);
+            if (!response || !response.ok) return;
+            const data = await response.json();
+            const seasonSelect = document.getElementById('season-select');
+            seasonSelect.innerHTML = '';
+            data.seasons.forEach(season => {
+                const option = document.createElement('option');
+                option.value = season.season_number;
+                option.textContent = `Season ${season.season_number}`;
+                seasonSelect.appendChild(option);
+            });
+        }
+
+        document.getElementById('tmdb-prev').addEventListener('click', () => {
+            if (tmdbCurrentPage > 1) {
+                tmdbCurrentPage--;
+                loadTmdbEntries();
+            }
+        });
+
+        document.getElementById('tmdb-next').addEventListener('click', () => {
+            tmdbCurrentPage++;
+            loadTmdbEntries();
+        });
+
+        document.getElementById('files-prev').addEventListener('click', () => {
+            if (filesCurrentPage > 1) {
+                filesCurrentPage--;
+                loadFiles();
+            }
+        });
+
+        document.getElementById('files-next').addEventListener('click', () => {
+            filesCurrentPage++;
+            loadFiles();
+        });
+
+        function openModal(entry) {
+            document.getElementById('edit-modal').style.display = 'flex';
+            document.getElementById('edit-tmdb-id').value = entry.tmdb_id;
+            document.getElementById('edit-tmdb-type').value = entry.type;
+            document.getElementById('edit-title').value = entry.title;
+            document.getElementById('edit-rating').value = entry.rating;
+            document.getElementById('edit-plot').value = entry.plot;
+            document.getElementById('edit-year').value = entry.year;
+            document.getElementById('edit-poster-path').value = entry.poster_path;
+        }
+
+        function closeModal() {
+            document.getElementById('edit-modal').style.display = 'none';
+        }
+
+        async function updateTmdbEntry() {
+            const tmdbId = document.getElementById('edit-tmdb-id').value;
+            const tmdbType = document.getElementById('edit-tmdb-type').value;
+            const data = {
+                title: document.getElementById('edit-title').value,
+                rating: document.getElementById('edit-rating').value,
+                plot: document.getElementById('edit-plot').value,
+                year: document.getElementById('edit-year').value,
+                poster_path: document.getElementById('edit-poster-path').value               
+            };
+            const response = await fetchWithAuth(`${API_BASE_URL}/api/admin/tmdb/${tmdbId}/${tmdbType}`, {
+                method: 'PUT',
+                body: JSON.stringify(data)
+            });
+            if (response && response.ok) {
+                showNotification('TMDB entry updated successfully!');
+                closeModal();
+                loadTmdbEntries();
+            } else {
+                showNotification('Failed to update TMDB entry.', true);
+            }
+        }
+
+        async function loadChannels() {
+            const response = await fetchWithAuth(`${API_BASE_URL}/api/admin/channels`);
+            if (!response || !response.ok) return;
+            const channels = await response.json();
+            const select = document.getElementById('channel-filter');
+            channels.forEach(channel => {
+                const option = document.createElement('option');
+                option.value = channel.channel_id;
+                option.textContent = channel.channel_name;
+                select.appendChild(option);
+            });
+        }
+
+        // 🚀 Run authorization check on page load
+        verifyAuthorization().then(loadChannels);
+
+        function showNotification(message, isError = false) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.style.backgroundColor = isError ? '#e50914' : '#4CAF50';
+            notification.style.display = 'block';
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+
+        function openPosterModal(file) {
+            document.getElementById('edit-poster-modal').style.display = 'flex';
+            document.getElementById('edit-file-id').value = file.id;
+            document.getElementById('edit-poster-url').value = file.poster_url || '';
+        }
+
+        function closePosterModal() {
+            document.getElementById('edit-poster-modal').style.display = 'none';
+        }
+
+        async function updateFilePoster() {
+            const fileId = document.getElementById('edit-file-id').value;
+            const posterUrl = document.getElementById('edit-poster-url').value;
+            const response = await fetchWithAuth(`${API_BASE_URL}/api/admin/files/${fileId}`, {
+                method: 'PUT',
+                body: JSON.stringify({ poster_url: posterUrl })
+            });
+            if (response && response.ok) {
+                showNotification('File poster updated successfully!');
+                closePosterModal();
+                loadFiles(fileSearchQuery);
+            } else {
+                const error = await response.json();
+                showNotification(error.detail || 'Failed to update file poster.', true);
+            }
+        }
+
+        async function deleteFile(fileId) {
+            if (!confirm('Are you sure you want to delete this file?')) {
+                return;
+            }
+            try {
+                const response = await fetchWithAuth(`${API_BASE_URL}/api/admin/files/${fileId}`, {
+                    method: 'DELETE'
+                });
+                if (response && response.ok) {
+                    showNotification('File deleted successfully!');
+                    loadFiles(fileSearchQuery);
+                } else {
+                    showNotification('Failed to delete file.', true);
+                }
+            } catch (error) {
+                console.error('Error deleting file:', error);
+                showNotification('An unexpected error occurred while deleting the file.', true);
+            }
+        }
+    </script>
+    </div>
+</body>
+</html>
