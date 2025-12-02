@@ -14,13 +14,13 @@
 
         .file-grid {
             display: grid;
-            grid-template-columns: repeat(4, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 1rem;
         }
 
         @media (max-width: 600px) {
-            .file-grid {
-                grid-template-columns: repeat(1, 1fr);
+            .movie-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
                 gap: 0.5rem;
             }
 
@@ -109,18 +109,6 @@
         .btn-red {
             background-color: #e50914;
             color: #fff;
-        }
-
-        .btn-danger,
-        .btn-danger:focus {
-            background-color: #e50914 !important;
-            border-color: #e50914 !important;
-            box-shadow: none !important;
-        }
-
-        .btn-danger:hover {
-            background-color: #c40812 !important;
-            border-color: #c40812 !important;
         }
 
         .pagination .page-link {
@@ -214,7 +202,7 @@
 
         <div class="d-flex justify-content-center mt-2">
             <input type="number" id="page-input" class="form-control" style="width: 100px;" placeholder="Page">
-            <button id="goto-page" class="btn btn-danger ms-2">Go</button>
+            <button id="goto-page" class="btn btn-primary ms-2">Go</button>
         </div>
     </div>
 
@@ -391,4 +379,5 @@
         fetchFiles(1, currentSearch, currentSort);
     </script>
 </body>
+
 </html>
