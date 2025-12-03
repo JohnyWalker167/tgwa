@@ -61,7 +61,6 @@ async def main():
                 if info and not info.get("message", "").startswith("Error"):
                     update_data = {
                         "title": info.get("title"),
-                        "poster_path": info.get("poster_path"),
                         "year": info.get("year"),
                         "rating": info.get("rating"),
                         "plot": info.get("plot"),
@@ -101,3 +100,4 @@ if __name__ == "__main__":
     logger.info("Starting the rating update script.")
     asyncio.run(main())
     logger.info("Script finished.")
+
