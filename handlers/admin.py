@@ -114,15 +114,24 @@ async def get_files(admin_id: int = Depends(get_current_admin), page: int = 1, s
     if channel_id and channel_id.isdigit():
         query["channel_id"] = int(channel_id)
 
+    # If there's a search query, use the Atlas Search pipeline
     if search:
         sanitized_search = bot.sanitize_query(search)
+        # The query dict is now passed to the pipeline to handle filters
         pipeline = build_search_pipeline(sanitized_search, query, skip, page_size)
         result = await files_col.aggregate(pipeline).to_list(length=None)
-        files_data = result[0]['results'] if result and 'results' in result[0] else []
-        total_files = result[0]['totalCount'][0]['total'] if result and 'totalCount' in result[0] and result[0]['totalCount'] else 0
+        
+        # Correctly unpack the results from the new pipeline structure
+        if result and result[0]['results']:
+            files_data = result[0]['results']
+            total_files = result[0]['totalCount'][0]['total'] if result[0]['totalCount'] else 0
+        else:
+            files_data = []
+            total_files = 0
 
+    # If there's no search query, use a standard find query with the filters
     else:
-        files_cursor = files_col.find(query).sort("_id", 1).skip(skip).limit(page_size)
+        files_cursor = files_col.find(query).sort("_id", -1).skip(skip).limit(page_size)
         total_files = await files_col.count_documents(query)
         files_data = await files_cursor.to_list(length=page_size)
 

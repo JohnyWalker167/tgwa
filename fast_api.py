@@ -357,8 +357,14 @@ async def get_others(page: int = 1, search: str = None, sort: str = "recent", us
         sanitized_search = bot.sanitize_query(search)
         pipeline = build_search_pipeline(sanitized_search, {"channel_id": {"$nin": TMDB_CHANNEL_ID}}, skip, page_size)
         result = await files_col.aggregate(pipeline).to_list(length=None)
-        files = result[0]['results'] if result and 'results' in result[0] else []
-        total_files = result[0]['totalCount'][0]['total'] if result and 'totalCount' in result[0] and result[0]['totalCount'] else 0
+
+        # Correctly unpack the results from the new pipeline structure
+        if result and result[0]['results']:
+            files = result[0]['results']
+            total_files = result[0]['totalCount'][0]['total'] if result[0]['totalCount'] else 0
+        else:
+            files = []
+            total_files = 0
     else:
         query = {"channel_id": {"$nin": TMDB_CHANNEL_ID}}
         files = await files_col.find(query).sort(sort_order).skip(skip).limit(page_size).to_list(length=page_size)

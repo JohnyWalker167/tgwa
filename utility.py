@@ -78,62 +78,81 @@ AUTO_DELETE_SECONDS = 2 * 60
 logger = logging.getLogger(__name__)
 
 def build_search_pipeline(query, match_query, skip, limit):
-    # Build search stage with phrase
+    # Base search stage
     search_stage = {
         "$search": {
             "index": "default",
-            "phrase": {
-                "query": query.strip(),
-                "path": "file_name"
+            "compound": {
+                "must": [{
+                    "text": {
+                        "query": query.strip(),
+                        "path": "file_name"
+                    }
+                }]
             }
         }
     }
-
-    # Match allowed channel IDs
-    match_stage = {
-        "$match": match_query
-    }
+    
+    # Handle different filter structures
+    filter_clauses = []
+    
+    # Filter for admin panel: {"tmdb_id": {"$exists": False}}
+    if match_query.get("tmdb_id") == {"$exists": False}:
+        filter_clauses.append({
+            "mustNot": {
+                "exists": {
+                    "path": "tmdb_id"
+                }
+            }
+        })
+        
+    # Filter for /api/others: {"channel_id": {"$nin": [...]}}
+    if "channel_id" in match_query and "$nin" in match_query["channel_id"]:
+        for channel_id in match_query["channel_id"]["$nin"]:
+            filter_clauses.append({
+                "mustNot": {
+                    "equals": {
+                        "path": "channel_id",
+                        "value": channel_id
+                    }
+                }
+            })
+            
+    # Filter for admin panel: {"channel_id": 12345}
+    elif "channel_id" in match_query:
+        filter_clauses.append({
+            "must": {
+                "equals": {
+                    "path": "channel_id",
+                    "value": match_query["channel_id"]
+                }
+            }
+        })
+        
+    if filter_clauses:
+        search_stage["$search"]["compound"]["filter"] = filter_clauses
 
     # Project only necessary fields and search score
     project_stage = {
         "$project": {
-            "_id": 1,
-            "file_name": 1,
-            "file_size": 1,
-            "file_format": 1,
-            "message_id": 1,
-            "channel_id": 1,
-            "poster_url": 1,
-            "tmdb_id": 1,
-            "tmdb_type": 1,
-            "score": {"$meta": "searchScore"}
+            "_id": 1, "file_name": 1, "file_size": 1, "file_format": 1, 
+            "message_id": 1, "channel_id": 1, "poster_url": 1, "tmdb_id": 1, 
+            "tmdb_type": 1, "score": {"$meta": "searchScore"}
         }
     }
 
     # Sort results by score and then file name
-    sort_stage = {
-        "$sort": {
-            "file_name": 1,
-            "score": -1
-        }
-    }
+    sort_stage = {"$sort": {"score": -1, "file_name": 1}}
 
-    # Facet: paginated results and total count
+    # Facet for pagination
     facet_stage = {
         "$facet": {
-            "results": [
-                project_stage,
-                sort_stage,
-                {"$skip": skip},
-                {"$limit": limit}
-            ],
-            "totalCount": [
-                {"$count": "total"}
-            ]
+            "results": [{"$skip": skip}, {"$limit": limit}],
+            "totalCount": [{"$count": "total"}]
         }
     }
 
-    return [search_stage, match_stage, facet_stage]
+    return [search_stage, project_stage, sort_stage, facet_stage]
 
 # =========================
 # Channel & User Utilities
