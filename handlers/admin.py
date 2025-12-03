@@ -116,7 +116,7 @@ async def get_files(admin_id: int = Depends(get_current_admin), page: int = 1, s
 
     if search:
         sanitized_search = bot.sanitize_query(search)
-        pipeline = build_search_pipeline(sanitized_search, {}, skip, page_size)
+        pipeline = build_search_pipeline(sanitized_search, query, skip, page_size)
         result = await files_col.aggregate(pipeline).to_list(length=None)
         files_data = result[0]['results'] if result and 'results' in result[0] else []
         total_files = result[0]['totalCount'][0]['total'] if result and 'totalCount' in result[0] and result[0]['totalCount'] else 0

@@ -89,10 +89,8 @@ def build_search_pipeline(query, match_query, skip, limit):
         }
     }
 
-    # Match allowed channel IDs
-    match_stage = {
-        "$match": match_query
-    }
+    # Match filters (channel_id, no_tmdb_id, etc.)
+    match_stage = {"$match": match_query} if match_query else {}
 
     # Project only necessary fields and search score
     project_stage = {
@@ -133,8 +131,16 @@ def build_search_pipeline(query, match_query, skip, limit):
         }
     }
 
-    return [search_stage, match_stage, facet_stage]
+    # Final pipeline
+    pipeline = [search_stage]
 
+    if match_query:
+        pipeline.append(match_stage)
+
+    pipeline.append(facet_stage)
+
+    return pipeline
+    
 # =========================
 # Channel & User Utilities
 # =========================
