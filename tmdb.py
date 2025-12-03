@@ -3,7 +3,7 @@ import re
 import aiohttp
 import asyncio
 import PTN
-from config import TMDB_API_KEY, logger, TMDB_CHANNEL_ID, SEND_UPDATES, UPDATE_CHANNEL_ID, PLACEHOLDER_TMDB_ID, PLACEHOLDER_TMDB_TYPE
+from config import TMDB_API_KEY, logger, TMDB_CHANNEL_ID, SEND_UPDATES, UPDATE_CHANNEL_ID
 from db import tmdb_col, genres_col, stars_col, directors_col, languages_col
 from utility import safe_api_call, remove_redandent
 from pyrogram import enums
@@ -288,14 +288,7 @@ async def process_tmdb_info(bot, file_info):
         else:
             result = await get_movie_id(title, year)
         if not result:
-            file_info["tmdb_id"] = PLACEHOLDER_TMDB_ID
-            file_info["tmdb_type"] = PLACEHOLDER_TMDB_TYPE
-            exists = await tmdb_col.find_one({"tmdb_id": PLACEHOLDER_TMDB_ID, "tmdb_type": PLACEHOLDER_TMDB_TYPE})
-            if not exists:
-                info = await get_info(PLACEHOLDER_TMDB_TYPE, PLACEHOLDER_TMDB_ID)
-                if info and not ("message" in info and info["message"].startswith("Error")):
-                    await upsert_tmdb_info(PLACEHOLDER_TMDB_ID, PLACEHOLDER_TMDB_TYPE, info)
-            return PLACEHOLDER_TMDB_ID, PLACEHOLDER_TMDB_TYPE
+            return None
         
         tmdb_id, tmdb_type = result['id'], result['media_type']
         file_info['tmdb_id'] = tmdb_id

@@ -77,6 +77,3 @@ SHORTERNER_URL = os.getenv('SHORTERNER_URL')
 
 MAX_FILES_PER_SESSION = int(os.getenv("MAX_FILES_PER_SESSION", "10"))
 
-# Placeholder for TMDB not found
-PLACEHOLDER_TMDB_ID = 970286
-PLACEHOLDER_TMDB_TYPE = "movie"

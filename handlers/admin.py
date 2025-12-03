@@ -102,19 +102,11 @@ async def get_channels(admin_id: int = Depends(get_current_admin)):
     return channels
 
 @router.get("/files")
-async def get_files(admin_id: int = Depends(get_current_admin), page: int = 1, search: str = None, tmdb_id: str = None, no_tmdb_id: bool = False, channel_id: int = None):
+async def get_files(admin_id: int = Depends(get_current_admin), page: int = 1, search: str = None, no_tmdb_id: bool = False, channel_id: int = None):
     page_size = 10
     skip = (page - 1) * page_size
     query = {}
 
-    if tmdb_id:
-        try:
-            # Try to convert to int for numeric TMDB IDs
-            query["tmdb_id"] = int(tmdb_id)
-        except ValueError:
-            # Keep as string for non-numeric IDs like "TMDD_NOT_FOUND"
-            query["tmdb_id"] = tmdb_id
-    
     if no_tmdb_id:
         query["tmdb_id"] = {"$exists": False}
     
@@ -123,20 +115,10 @@ async def get_files(admin_id: int = Depends(get_current_admin), page: int = 1, s
 
     if search:
         sanitized_search = bot.sanitize_query(search)
-        # Note: Atlas Search and regex filtering don't easily mix.
-        # This approach prioritizes TMDB ID filtering over Atlas Search when both are provided.
-        # A more complex aggregation pipeline would be needed to combine them perfectly.
-        if "tmdb_id" in query:
-             query["file_name"] = {"$regex": re.escape(sanitized_search), "$options": "i"}
-             files_cursor = files_col.find(query).sort("_id", -1).skip(skip).limit(page_size)
-             total_files = await files_col.count_documents(query)
-             files_data = await files_cursor.to_list(length=page_size)
-
-        else:
-             pipeline = build_search_pipeline(sanitized_search, {}, skip, page_size)
-             result = await files_col.aggregate(pipeline).to_list(length=None)
-             files_data = result[0]['results'] if result and 'results' in result[0] else []
-             total_files = result[0]['totalCount'][0]['total'] if result and 'totalCount' in result[0] and result[0]['totalCount'] else 0
+        pipeline = build_search_pipeline(sanitized_search, query, skip, page_size)
+        result = await files_col.aggregate(pipeline).to_list(length=None)
+        files_data = result[0]['results'] if result and 'results' in result[0] else []
+        total_files = result[0]['totalCount'][0]['total'] if result and 'totalCount' in result[0] and result[0]['totalCount'] else 0
 
     else:
         files_cursor = files_col.find(query).sort("_id", 1).skip(skip).limit(page_size)
@@ -273,7 +255,7 @@ async def delete_tmdb_entry(tmdb_id: str, tmdb_type: str, admin_id: int = Depend
         tmdb_id_converted = tmdb_id
         
     await tmdb_col.delete_one({"tmdb_id": tmdb_id_converted, "tmdb_type": tmdb_type})
-    await files_col.update_many({"tmdb_id": tmdb_id_converted, "tmdb_type": tmdb_type}, {"$unset": {"tmdb_id": 970286, "tmdb_type": "movie"}})
+    await files_col.update_many({"tmdb_id": tmdb_id_converted, "tmdb_type": tmdb_type}, {"$unset": {"tmdb_id": "", "tmdb_type": ""}})
     invalidate_cache()
     return {"status": "success"}
 

@@ -231,7 +231,6 @@
 
         <h2>Files</h2>
         <input type="search" id="file-search" placeholder="Search by filename">
-        <input type="search" id="file-tmdb-id-search" placeholder="Search by TMDB ID">
         <div class="form-check mt-2">
             <input class="form-check-input" type="checkbox" id="no-tmdb-id-filter">
             <label class="form-check-label" for="no-tmdb-id-filter">
@@ -294,7 +293,6 @@
         let tmdbSearchQuery = '';
         let tmdbTypeFilter = '';
         let fileSearchQuery = '';
-        let fileTmdbIdSearchQuery = '';
         let noTmdbIdFilter = false;
         let channelFilter = '';
         const selectedFileIds = new Set();
@@ -409,7 +407,7 @@
         }
 
         async function loadFiles() {
-            const response = await fetchWithAuth(`${API_BASE_URL}/api/admin/files?page=${filesCurrentPage}&search=${fileSearchQuery}&tmdb_id=${fileTmdbIdSearchQuery}&no_tmdb_id=${noTmdbIdFilter}&channel_id=${channelFilter}`);
+            const response = await fetchWithAuth(`${API_BASE_URL}/api/admin/files?page=${filesCurrentPage}&search=${fileSearchQuery}&no_tmdb_id=${noTmdbIdFilter}&channel_id=${channelFilter}`);
             if (!response || !response.ok) return;
             const data = await response.json();
             const list = document.getElementById('files-list');
@@ -540,12 +538,6 @@
         const debouncedLoadFiles = debounce(loadFiles, 1000);
         document.getElementById('file-search').addEventListener('input', (e) => {
             fileSearchQuery = e.target.value;
-            filesCurrentPage = 1;
-            debouncedLoadFiles();
-        });
-
-        document.getElementById('file-tmdb-id-search').addEventListener('input', (e) => {
-            fileTmdbIdSearchQuery = e.target.value;
             filesCurrentPage = 1;
             debouncedLoadFiles();
         });
