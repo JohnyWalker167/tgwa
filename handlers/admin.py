@@ -11,7 +11,8 @@ from bson.objectid import ObjectId
 from pyrogram import enums
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from tmdb import get_info, upsert_tmdb_info, format_tmdb_info_from_db
-from typing import Optional 
+from typing import Optional
+
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
 # Configure logging
@@ -102,7 +103,7 @@ async def get_channels(admin_id: int = Depends(get_current_admin)):
     return channels
 
 @router.get("/files")
-async def get_files(admin_id: int = Depends(get_current_admin), page: int = 1, search: str = None, no_tmdb_id: bool = False, channel_id: Optional[int] = None):
+async def get_files(admin_id: int = Depends(get_current_admin), page: int = 1, search: str = None, no_tmdb_id: bool = False, channel_id: Optional[str] = None):
     page_size = 10
     skip = (page - 1) * page_size
     query = {}
@@ -110,8 +111,8 @@ async def get_files(admin_id: int = Depends(get_current_admin), page: int = 1, s
     if no_tmdb_id:
         query["tmdb_id"] = {"$exists": False}
     
-    if channel_id:
-        query["channel_id"] = channel_id
+    if channel_id and channel_id.isdigit():
+        query["channel_id"] = int(channel_id)
 
     if search:
         sanitized_search = bot.sanitize_query(search)
