@@ -10,7 +10,7 @@ from cache import invalidate_cache
 from bson.objectid import ObjectId
 from pyrogram import enums
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-from tmdb import get_info, upsert_tmdb_info, clean_genre_name
+from tmdb import get_info, upsert_tmdb_info, format_tmdb_info_from_db
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -166,20 +166,26 @@ async def send_to_channel(data: dict, admin_id: int = Depends(get_current_admin)
     tmdb_id = data.get("tmdb_id")
     tmdb_type = data.get("tmdb_type")
 
-    info = await get_info(tmdb_type, tmdb_id)
-    if "message" in info and info["message"].startswith("Error"):
-        raise HTTPException(status_code=404, detail=info["message"])
+    # Fetch entry from the database
+    tmdb_document = await tmdb_col.find_one({"tmdb_id": tmdb_id, "tmdb_type": tmdb_type})
+    if not tmdb_document:
+        raise HTTPException(status_code=404, detail="TMDB entry not found in database")
 
-    if SEND_UPDATES and info.get("poster_url"):
+    # Format the message using data from the database
+    caption = await format_tmdb_info_from_db(tmdb_document)
+    
+    poster_url = f"{POSTER_BASE_URL}{tmdb_document.get('poster_path')}" if tmdb_document.get('poster_path') else None
+
+    if SEND_UPDATES and poster_url:
         keyboard = InlineKeyboardMarkup(
-            [[InlineKeyboardButton("🎥 Trailer", url=info["trailer_url"])]]
-        ) if info.get("trailer_url") else None
+            [[InlineKeyboardButton("🎥 Trailer", url=tmdb_document["trailer_url"])]]
+        ) if tmdb_document.get("trailer_url") else None
 
         await safe_api_call(
             lambda: bot.send_photo(
                 UPDATE_CHANNEL_ID,
-                photo=info["poster_url"],
-                caption=info["message"],
+                photo=poster_url,
+                caption=caption,
                 parse_mode=enums.ParseMode.HTML,
                 reply_markup=keyboard
             )
@@ -189,26 +195,34 @@ async def send_to_channel(data: dict, admin_id: int = Depends(get_current_admin)
         raise HTTPException(status_code=400, detail="Sending updates is disabled or poster URL is missing")
 
 @router.post("/tmdb/send-all")
-async def send_all_to_channel(admin_id: int = Depends(get_current_admin)):
+async def send_all_to_channel(data: dict = None, admin_id: int = Depends(get_current_admin)):
     if not SEND_UPDATES:
         raise HTTPException(status_code=400, detail="Sending updates is disabled")
 
-    cursor = tmdb_col.find({})
-    async for entry in cursor:
-        info = await get_info(entry["tmdb_type"], entry["tmdb_id"])
-        if "message" in info and info["message"].startswith("Error"):
-            continue
+    query = {}
+    if data:
+        restart_tmdb_id = data.get("restart_tmdb_id")
+        restart_tmdb_type = data.get("restart_tmdb_type")
+        if restart_tmdb_id and restart_tmdb_type:
+            last_doc = await tmdb_col.find_one({"tmdb_id": restart_tmdb_id, "tmdb_type": restart_tmdb_type})
+            if last_doc:
+                query["_id"] = {"$gt": last_doc["_id"]}
 
-        if info.get("poster_url"):
+    cursor = tmdb_col.find(query).sort("_id", 1)
+    async for entry in cursor:
+        caption = await format_tmdb_info_from_db(entry)
+        poster_url = f"{POSTER_BASE_URL}{entry.get('poster_path')}" if entry.get('poster_path') else None
+
+        if poster_url:
             keyboard = InlineKeyboardMarkup(
-                [[InlineKeyboardButton("🎥 Trailer", url=info["trailer_url"])]]
-            ) if info.get("trailer_url") else None
+                [[InlineKeyboardButton("🎥 Trailer", url=entry["trailer_url"])]]
+            ) if entry.get("trailer_url") else None
 
             await safe_api_call(
                 lambda: bot.send_photo(
                     UPDATE_CHANNEL_ID,
-                    photo=info["poster_url"],
-                    caption=info["message"],
+                    photo=poster_url,
+                    caption=caption,
                     parse_mode=enums.ParseMode.HTML,
                     reply_markup=keyboard
                 )

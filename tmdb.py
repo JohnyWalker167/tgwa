@@ -196,6 +196,47 @@ async def format_tmdb_info(info, data):
     else:
         return "Unknown type. Unable to format information."
 
+async def format_tmdb_info_from_db(tmdb_document):
+    # Fetch names from referenced collections
+    genre_names = [genre['name'] async for genre in genres_col.find({'_id': {'$in': tmdb_document.get('genres', [])}})]
+    star_names = [star['name'] async for star in stars_col.find({'_id': {'$in': tmdb_document.get('cast', [])}})]
+    director_names = [director['name'] async for director in directors_col.find({'_id': {'$in': tmdb_document.get('directors', [])}})]
+    language_names = [lang['name'] async for lang in languages_col.find({'_id': {'$in': tmdb_document.get('spoken_languages', [])}})]
+
+    tmdb_type = tmdb_document.get('tmdb_type')
+    if not tmdb_type or tmdb_type not in ['movie', 'tv']:
+        return "Unknown type. Unable to format information."
+
+    genre_tags = " ".join([genre_tag_with_emoji(g) for g in genre_names])
+    director = ', '.join(director_names)
+    starring = ", ".join(star_names)
+    spoken_languages = ", ".join(language_names)
+    rating_str = f"{tmdb_document['rating']}" if tmdb_document.get('rating') is not None else None
+
+    title_emoji = "🎬" if tmdb_type == 'movie' else "📺"
+    message = f"<b>{title_emoji} Title:</b> {tmdb_document['title']}\n"
+    message += f"<b>📆 Release:</b> {tmdb_document['year']}\n" if tmdb_document.get('year') else ""
+
+    if tmdb_type == 'movie':
+        runtime = format_duration(tmdb_document.get('runtime'))
+        message += f"<b>⏳️ Duration:</b> {runtime}\n" if runtime else ""
+    elif tmdb_type == 'tv':
+        seasons_data = tmdb_document.get('seasons', [])
+        num_seasons = len(seasons_data)
+        num_episodes = sum(s.get('episode_count', 0) for s in seasons_data)
+        message += f"<b>📺 Seasons:</b> {num_seasons}\n" if num_seasons > 0 else ""
+        message += f"<b>📺 Episodes:</b> {num_episodes}\n" if num_episodes > 0 else ""
+
+    message += f"<b>⭐ Rating:</b> {rating_str} / 10\n" if rating_str else ""
+    message += f"<b>🅰️ Languages:</b> {spoken_languages}\n" if spoken_languages else ""
+    message += f"<b>⚙️ Genre:</b> {genre_tags}\n" if genre_tags else ""
+    message += "\n"
+    message += f"<b>📝 Story:</b> {tmdb_document['plot']}\n\n" if tmdb_document.get('plot') else ""
+    message += f"<b>🎬 Director:</b> {director}\n" if director else ""
+    message += f"<b>🎭 Stars:</b> {starring}\n" if starring else ""
+    
+    return message.strip()
+
 async def upsert_tmdb_info(tmdb_id, tmdb_type, info):
     genre_ids = [await get_or_create_genre(genre) for genre in info.get("genres", [])]
     star_ids = [await get_or_create_person(star, stars_col) for star in info.get("cast", [])[:5]]

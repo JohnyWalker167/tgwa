@@ -220,6 +220,13 @@
             <select id="season-select"></select>
         </div>
         <button onclick="addTmdbEntry()">Add</button>
+        
+        <h2>Send All with Restart</h2>
+        <input type="number" id="restart-tmdb-id" placeholder="Restart TMDB ID (Optional)">
+        <select id="restart-tmdb-type">
+            <option value="movie">Movie</option>
+            <option value="tv">Series</option>
+        </select>
         <button onclick="sendAllToChannel()">Send All</button>
 
         <h2>Files</h2>
@@ -500,9 +507,25 @@
 
         async function sendAllToChannel() {
             if (confirm('Are you sure you want to send all TMDB entries to the channel? This could take a while.')) {
+                const restartTmdbId = document.getElementById('restart-tmdb-id').value;
+                const restartTmdbType = document.getElementById('restart-tmdb-type').value;
+
+                let body = {};
+                if (restartTmdbId && restartTmdbId.trim() !== '') {
+                    body = {
+                        restart_tmdb_id: parseInt(restartTmdbId),
+                        restart_tmdb_type: restartTmdbType
+                    };
+                }
+
                 const response = await fetchWithAuth(`${API_BASE_URL}/api/admin/tmdb/send-all`, {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(body)
                 });
+
                 if (response && response.ok) {
                     showNotification('Started sending all entries to the channel. This may take some time.');
                 } else {
