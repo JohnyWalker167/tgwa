@@ -225,8 +225,8 @@ async def get_media(
     return data
 
 @api.get("/api/media/{tmdb_id}")
-async def get_media_details(tmdb_id: str, tmdb_type: str, user_id: int = Depends(get_current_user)):
-    cache_key = f"media_details:{tmdb_id}:{tmdb_type}"
+async def get_media_details(tmdb_id: str, tmdb_type: str, page: int = 1, user_id: int = Depends(get_current_user)):
+    cache_key = f"media_details:{tmdb_id}:{tmdb_type}:{page}"
     cached_data = cache.get(cache_key)
     if cached_data:
         return cached_data
@@ -236,34 +236,53 @@ async def get_media_details(tmdb_id: str, tmdb_type: str, user_id: int = Depends
     except (ValueError, TypeError):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid TMDB ID")
 
-    pipeline = [
-        {"$match": {"tmdb_id": tmdb_id_int, "tmdb_type": tmdb_type}},
-        {"$lookup": {"from": "genres", "localField": "genres", "foreignField": "_id", "as": "genres"}},
-        {"$lookup": {"from": "stars", "localField": "cast", "foreignField": "_id", "as": "cast"}},
-        {"$lookup": {"from": "directors", "localField": "directors", "foreignField": "_id", "as": "directors"}},
-    ]
-    
-    entry = await tmdb_col.aggregate(pipeline).to_list(length=1)
+    # Fetch the main media entry details from cache if available, otherwise from DB
+    entry_cache_key = f"media_entry:{tmdb_id}:{tmdb_type}"
+    entry = cache.get(entry_cache_key)
     if not entry:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media not found")
+        pipeline = [
+            {"$match": {"tmdb_id": tmdb_id_int, "tmdb_type": tmdb_type}},
+            {"$lookup": {"from": "genres", "localField": "genres", "foreignField": "_id", "as": "genres"}},
+            {"$lookup": {"from": "stars", "localField": "cast", "foreignField": "_id", "as": "cast"}},
+            {"$lookup": {"from": "directors", "localField": "directors", "foreignField": "_id", "as": "directors"}},
+        ]
+        
+        result = await tmdb_col.aggregate(pipeline).to_list(length=1)
+        if not result:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Media not found")
+        
+        entry = result[0]
+        entry["_id"] = str(entry["_id"])
+        for field in ["genres", "cast", "directors"]:
+            if field in entry:
+                for item in entry[field]:
+                    item["_id"] = str(item["_id"])
+        cache[entry_cache_key] = entry
     
-    entry = entry[0]
-    entry["_id"] = str(entry["_id"])
-    for field in ["genres", "cast", "directors"]:
-        if field in entry:
-            for item in entry[field]:
-                item["_id"] = str(item["_id"])
-
-    # For movies, we can fetch associated files directly
+    # For movies, fetch paginated associated files
     if tmdb_type == "movie":
-        files_cursor = files_col.find({"tmdb_id": tmdb_id_int, "tmdb_type": "movie",  "file_name": {"$not": {"$regex": r"\.srt$", "$options": "i"}}})
+        page_size = 10
+        skip = (page - 1) * page_size
+        
+        query = {
+            "tmdb_id": tmdb_id_int, 
+            "tmdb_type": "movie",  
+            "file_name": {"$not": {"$regex": r"\.srt$", "$options": "i"}}
+        }
+        
+        files_cursor = files_col.find(query).sort("file_name", 1).skip(skip).limit(page_size)
+        total_files = await files_col.count_documents(query)
+
         files = []
         async for file in files_cursor:
             file["_id"] = str(file["_id"])
             file["stream_url"] = f"{MY_DOMAIN}/player/{bot.encode_file_link(file['channel_id'], file['message_id'])}"
             files.append(file)
+            
         entry["files"] = files
-        entry["total_files"] = len(files)
+        entry["total_files"] = total_files
+        entry["total_pages"] = (total_files + page_size - 1) // page_size
+        entry["current_page"] = page
 
     cache[cache_key] = entry
     return entry
