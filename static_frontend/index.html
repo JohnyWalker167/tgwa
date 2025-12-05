@@ -14,13 +14,13 @@
 
         .movie-grid {
             display: grid;
-            grid-template-columns: repeat(4, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 1rem;
         }
 
         @media (max-width: 600px) {
             .movie-grid {
-                grid-template-columns: repeat(1, 1fr);
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
                 gap: 0.5rem;
             }
 
@@ -147,11 +147,6 @@
             }
         }
 
-        .btn-red {
-            background-color: #e50914;;
-            color: #fff;
-        }
-
         .movie-tile::after {
             content: "";
             position: absolute;
@@ -206,13 +201,13 @@
 
         <div class="d-flex flex-column flex-md-row justify-content-md-between align-items-center mb-4">
             <div id="category-buttons" class="btn-group mb-2 mb-md-0" role="group">
-                <button type="button" class="btn btn-red" data-category="movie">Movies</button>
+                <button type="button" class="btn btn-danger" data-category="movie">Movies</button>
                 <button type="button" class="btn btn-outline-light" data-category="tv">Shows</button>
             </div>
 
             <div id="sort-buttons" class="btn-group" role="group">
                 <button type="button" class="btn btn-outline-light" data-sort="rating">Rating</button>
-                <button type="button" class="btn btn-red" data-sort="recent">Recently Added</button>
+                <button type="button" class="btn btn-danger" data-sort="recent">Recently Added</button>
                 <button type="button" class="btn btn-outline-light" data-sort="year">Year</button>
             </div>
         </div>
@@ -239,7 +234,7 @@
             <div class="add-comment mt-4">
                 <textarea id="comment-input" class="form-control mb-2" rows="3"
                     placeholder="Add a comment..."></textarea>
-                <button id="submit-comment" class="btn btn-red">Submit</button>
+                <button id="submit-comment" class="btn btn-danger">Submit</button>
             </div>
         </div>
     </div>
@@ -293,17 +288,17 @@
 
         async function fetchMovies(page = 1) {
             if (page < 1 || (page > totalPages && totalPages > 0)) return;
-        
+
             const urlParams = new URLSearchParams(window.location.search);
             const genre = urlParams.get('genre');
             const cast = urlParams.get('cast');
             const director = urlParams.get('director');
-        
+
             let filterQuery = '';
             if (genre) filterQuery = `&genre=${genre}`;
             if (cast) filterQuery = `&cast=${cast}`;
             if (director) filterQuery = `&director=${director}`;
-        
+
             try {
                 const response = await fetchWithAuth(`${API_BASE_URL}/api/media?page=${page}&search=${currentSearch}&category=${currentCategory}&sort=${currentSort}${filterQuery}`);
                 if (response.ok) {
@@ -319,7 +314,7 @@
                 console.error('Error fetching movies:', error);
             }
         }
-        
+
         async function getFilterName(type, id) {
             try {
                 const response = await fetchWithAuth(`${API_BASE_URL}/api/${type}s/${id}`);
@@ -333,13 +328,13 @@
                 return `Filter ${id}`;
             }
         }
-        
+
         async function displayFilterTag(genre, cast, director) {
             const filterContainer = document.getElementById('filter-container');
             filterContainer.innerHTML = '';
-        
+
             let filterType, filterId;
-        
+
             if (genre) {
                 filterType = 'genre';
                 filterId = genre;
@@ -350,7 +345,7 @@
                 filterType = 'director';
                 filterId = director;
             }
-        
+
             if (filterType && filterId) {
                 const filterName = await getFilterName(filterType, filterId);
                 const tag = document.createElement('div');
@@ -362,7 +357,7 @@
                 filterContainer.appendChild(tag);
             }
         }
-        
+
         function clearFilter() {
             const url = new URL(window.location);
             url.searchParams.delete('genre');
@@ -394,7 +389,7 @@
 
                 const detailsBtn = document.createElement('a');
                 detailsBtn.href = `details.html?tmdb_id=${movie.tmdb_id}&tmdb_type=${movie.tmdb_type}`;
-                detailsBtn.className = 'btn btn-red details-btn';
+                detailsBtn.className = 'btn btn-danger details-btn';
                 detailsBtn.textContent = 'Details';
                 tile.appendChild(detailsBtn);
 
@@ -438,16 +433,16 @@
         categoryButtons.addEventListener('click', (e) => {
             if (e.target.tagName === 'BUTTON') {
                 currentCategory = e.target.dataset.category;
-                fetchMovies(1);
                 updateButtonStyles(categoryButtons, e.target);
+                fetchMovies(1);
             }
         });
 
         sortButtons.addEventListener('click', (e) => {
             if (e.target.tagName === 'BUTTON') {
                 currentSort = e.target.dataset.sort;
-                fetchMovies(1);
                 updateButtonStyles(sortButtons, e.target);
+                fetchMovies(1);
             }
         });
 
@@ -458,11 +453,11 @@
 
         function updateButtonStyles(buttonGroup, activeButton) {
             Array.from(buttonGroup.children).forEach(button => {
-                button.classList.remove('btn-red');
+                button.classList.remove('btn-danger');
                 button.classList.add('btn-outline-light');
             });
             activeButton.classList.remove('btn-outline-light');
-            activeButton.classList.add('btn-red');
+            activeButton.classList.add('btn-danger');
         }
 
         async function fetchComments(page = 1) {

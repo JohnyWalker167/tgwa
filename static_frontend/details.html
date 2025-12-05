@@ -547,7 +547,7 @@
                 if (tmdbType === 'tv' && seasonNumber) {
                     url = `${API_BASE_URL}/api/media/${tmdbId}/season/${seasonNumber}?page=${page}`;
                 } else if (tmdbType === 'movie') {
-                    url = `${API_BASE_URL}/api/media/${tmdbId}?tmdb_type=movie`;
+                    url = `${API_BASE_URL}/api/media/${tmdbId}?tmdb_type=movie&page=${page}`;
                 } else {
                     return; // Don't fetch for TV shows without a season
                 }
@@ -564,8 +564,8 @@
                         document.getElementById('modal-title').textContent = `Found ${data.total_files} files for Season ${seasonNumber}`;
                     } else {
                         files = data.files;
-                        total = 1;
-                        current = 1;
+                        total = data.total_pages;
+                        current = data.current_page;
                         document.getElementById('modal-title').textContent = `Found ${data.total_files} files`;
                     }
 

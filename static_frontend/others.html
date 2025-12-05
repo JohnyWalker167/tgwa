@@ -14,32 +14,8 @@
 
         .file-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            grid-template-columns: repeat(3, minmax(200px, 1fr));
             gap: 1rem;
-        }
-
-        @media (max-width: 600px) {
-            .movie-grid {
-                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-                gap: 0.5rem;
-            }
-
-            .file-tile {
-                border-radius: 5px;
-            }
-
-            #search-input {
-                width: 100% !important;
-            }
-
-            .d-flex.justify-content-between {
-                flex-direction: column;
-                align-items: stretch !important;
-            }
-
-            .d-flex.justify-content-between>* {
-                margin-bottom: 0.5rem;
-            }
         }
 
         .file-tile {
@@ -50,7 +26,8 @@
             width: 100%;
         }
 
-        .file-tile img {
+        .file-tile img,
+        .file-tile canvas {
             width: 100%;
             height: auto;
             object-fit: contain;
@@ -58,7 +35,8 @@
             transition: transform 0.3s;
         }
 
-        .file-tile:hover img {
+        .file-tile:hover img,
+        .file-tile:hover canvas {
             transform: scale(1.1);
         }
 
@@ -78,8 +56,33 @@
             padding-bottom: 0.5rem;
         }
 
-        .file-tile:hover .overlay {
+        .file-tile:hover .overlay,
+        .file-tile.show-overlay .overlay {
             opacity: 1;
+        }
+
+        @media (max-width: 600px) {
+             .file-grid {
+                grid-template-columns: repeat(1, minmax(150px, 1fr));
+                gap: 0.5rem;
+            }
+
+            .file-tile {
+                border-radius: 5px;
+            }
+
+            #search-input {
+                width: 100% !important;
+            }
+
+            .d-flex.justify-content-between {
+                flex-direction: column;
+                align-items: stretch !important;
+            }
+
+            .d-flex.justify-content-between>* {
+                margin-bottom: 0.5rem;
+            }
         }
 
         .stream-btn {
@@ -161,9 +164,7 @@
             margin-bottom: 0.3rem;
             padding: 0 0.5rem;
             width: 100%;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            white-space: normal;
             word-break: break-all;
         }
 
@@ -202,181 +203,305 @@
 
         <div class="d-flex justify-content-center mt-2">
             <input type="number" id="page-input" class="form-control" style="width: 100px;" placeholder="Page">
-            <button id="goto-page" class="btn btn-primary ms-2">Go</button>
+            <button id="goto-page" class="btn btn-danger ms-2">Go</button>
         </div>
     </div>
 
     <script src="config.js"></script>
     <script>
+        // —————————————— DOM Elements ——————————————
         const loader = document.getElementById('loader');
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-            window.location.href = 'login.html';
-        }
-
-        const authHeader = { 'Authorization': `Bearer ${token}` };
         const searchInput = document.getElementById('search-input');
         const pageInput = document.getElementById('page-input');
         const gotoPageBtn = document.getElementById('goto-page');
+        const recentBtn = document.getElementById('recent-btn');
+        const oldestBtn = document.getElementById('oldest-btn');
+        const fileGrid = document.getElementById('file-grid');
+        const paginationContainer = document.getElementById('pagination');
+        const welcomeMessage = document.getElementById('welcome-message');
+
+        // —————————————— State Management ——————————————
+        const token = localStorage.getItem('authToken');
         let currentSort = 'recent';
         let currentSearch = '';
+        let currentPage = 1;
         let totalPages = 1;
 
+        // —————————————— Utility Functions ——————————————
+        /**
+         * Debounces a function to limit the rate at which it gets called.
+         * @param {Function} func The function to debounce.
+         * @param {number} delay The debounce delay in milliseconds.
+         * @returns {Function} The debounced function.
+         */
         function debounce(func, delay) {
             let timeout;
-            return function (...args) {
+            return function(...args) {
                 const context = this;
                 clearTimeout(timeout);
                 timeout = setTimeout(() => func.apply(context, args), delay);
             };
         }
 
+        // —————————————— API Communication ——————————————
+        /**
+         * Fetches a resource with authorization headers and handles 401 errors.
+         * @param {string} url The URL to fetch.
+         * @param {object} options The options for the fetch request.
+         * @returns {Promise<Response|undefined>} A promise that resolves to the response or undefined on error.
+         */
         async function fetchWithAuth(url, options = {}) {
             loader.style.display = 'flex';
             try {
+                const authHeader = { 'Authorization': `Bearer ${token}` };
                 const response = await fetch(url, { ...options, headers: { ...options.headers, ...authHeader } });
+
                 if (response.status === 401) {
                     localStorage.removeItem('authToken');
                     window.location.href = 'login.html';
+                    return; // Stop execution
                 }
                 return response;
             } catch (error) {
                 console.error('Error fetching data:', error);
+                // Optionally show a user-facing error message
             } finally {
                 loader.style.display = 'none';
             }
         }
 
-        async function fetchFiles(page = 1, search = '', sort = 'recent') {
-            if (page < 1 || (page > totalPages && totalPages > 0)) return;
+        /**
+         * Fetches the list of files from the API based on current state.
+         */
+        async function fetchFiles() {
+            // Validate page number
+            if (currentPage < 1 || (currentPage > totalPages && totalPages > 0)) {
+                console.warn(`Attempted to fetch invalid page: ${currentPage}`);
+                return;
+            }
             try {
-                const response = await fetchWithAuth(`${API_BASE_URL}/api/others?page=${page}&search=${search}&sort=${sort}`);
-                if (response.ok) {
+                const url = `${API_BASE_URL}/api/others?page=${currentPage}&search=${currentSearch}&sort=${currentSort}`;
+                const response = await fetchWithAuth(url);
+
+                if (response && response.ok) {
                     const data = await response.json();
                     totalPages = data.total_pages;
                     displayFiles(data.files);
-                    setupPagination(data.total_pages, data.current_page, search, sort);
+                    setupPagination(data.total_pages, data.current_page);
                 } else {
-                    console.error('Failed to fetch files');
+                    console.error('Failed to fetch files:', response ? response.statusText : 'No response');
                 }
             } catch (error) {
                 console.error('Error fetching files:', error);
             }
         }
 
-        function displayFiles(files) {
-            const grid = document.getElementById('file-grid');
-            grid.innerHTML = '';
-            files.forEach(file => {
-                const tile = document.createElement('div');
-                tile.className = 'file-tile';
-
-                const img = document.createElement('img');
-                img.src = file.poster_url || 'https://i.ibb.co/qzmwLvx/No-Image-Available.jpg';
-                img.alt = 'Poster';
-                img.loading = 'lazy';
-                tile.appendChild(img);
-
-                const overlay = document.createElement('div');
-                overlay.className = 'overlay';
-
-                // ✅ File name (with tooltip)
-                const fileName = document.createElement('div');
-                fileName.className = 'file-name';
-                fileName.textContent = file.file_name || 'Untitled';
-                fileName.title = file.file_name || 'Untitled';
-                overlay.appendChild(fileName);
-
-                // ✅ Details button
-                const detailsBtn = document.createElement('a');
-                detailsBtn.href = `simple_details.html?file_id=${file._id}`;
-                detailsBtn.className = 'btn btn-red stream-btn';
-                detailsBtn.textContent = 'Details';
-                overlay.appendChild(detailsBtn);
-
-                tile.appendChild(overlay);
-                grid.appendChild(tile);
-            });
-        }
-
-        function setupPagination(totalPages, currentPage, search, sort) {
-            const pagination = document.getElementById('pagination');
-            pagination.innerHTML = '';
-
-            if (currentPage > 1) {
-                const prev = document.createElement('li');
-                prev.className = 'page-item';
-                prev.innerHTML = `<a class="page-link" href="#" onclick="fetchFiles(${currentPage - 1}, '${search}', '${sort}')">Previous</a>`;
-                pagination.appendChild(prev);
-            }
-
-            for (let i = Math.max(1, currentPage - 1); i <= Math.min(totalPages, currentPage + 1); i++) {
-                const page = document.createElement('li');
-                page.className = `page-item ${i === currentPage ? 'active' : ''}`;
-                page.innerHTML = `<a class="page-link" href="#" onclick="fetchFiles(${i}, '${search}', '${sort}')">${i}</a>`;
-                pagination.appendChild(page);
-            }
-
-            if (currentPage < totalPages) {
-                const next = document.createElement('li');
-                next.className = 'page-item';
-                next.innerHTML = `<a class="page-link" href="#" onclick="fetchFiles(${currentPage + 1}, '${search}', '${sort}')">Next</a>`;
-                pagination.appendChild(next);
-            }
-        }
-
-        function updateButtonStyles() {
-            document.getElementById('recent-btn').className = `btn ${currentSort === 'recent' ? 'btn-danger' : 'btn-outline-light'}`;
-            document.getElementById('oldest-btn').className = `btn ${currentSort === 'oldest' ? 'btn-danger' : 'btn-outline-light'}`;
-        }
-
-        const debouncedFetchFiles = debounce(fetchFiles, 1000);
-
-        searchInput.addEventListener('input', (e) => {
-            currentSearch = e.target.value;
-            debouncedFetchFiles(1, currentSearch, currentSort);
-        });
-
-        gotoPageBtn.addEventListener('click', () => {
-            const page = parseInt(pageInput.value);
-            if (!isNaN(page)) {
-                fetchFiles(page, searchInput.value, currentSort);
-            }
-        });
-
-        document.getElementById('recent-btn').addEventListener('click', () => {
-            currentSort = 'recent';
-            fetchFiles(1, searchInput.value, currentSort);
-            updateButtonStyles();
-        });
-
-        document.getElementById('oldest-btn').addEventListener('click', () => {
-            currentSort = 'oldest';
-            fetchFiles(1, searchInput.value, currentSort);
-            updateButtonStyles();
-        });
-
-        function loadStateFromDefaults() {
-            currentSearch = '';
-            currentSort = 'recent';
-            updateButtonStyles();
-        }
-
+        /**
+         * Fetches the current user's information and updates the welcome message.
+         */
         async function loadUser() {
             try {
                 const response = await fetchWithAuth(`${API_BASE_URL}/api/user/me`);
-                if (response.ok) {
+                if (response && response.ok) {
                     const data = await response.json();
-                    document.getElementById('welcome-message').textContent = `Welcome, ${data.first_name}!`;
+                    welcomeMessage.textContent = `Welcome, ${data.first_name}!`;
                 }
             } catch (error) {
                 console.error('Error fetching user info:', error);
             }
         }
 
-        loadUser();
-        loadStateFromDefaults();
-        fetchFiles(1, currentSearch, currentSort);
+
+        // —————————————— UI Rendering ——————————————
+        /**
+         * Renders the list of files in the grid.
+         * @param {Array} files An array of file objects.
+         */
+        function displayFiles(files) {
+            fileGrid.innerHTML = ''; // Clear previous results
+            if (!files || files.length === 0) {
+                fileGrid.innerHTML = '<p>No files found.</p>';
+                return;
+            }
+            files.forEach(file => {
+                const tile = createFileTile(file);
+                fileGrid.appendChild(tile);
+            });
+        }
+
+        /**
+         * Creates a single file tile element.
+         * @param {object} file A file object from the API.
+         * @returns {HTMLElement} The created file tile element.
+         */
+        function createFileTile(file) {
+            const tile = document.createElement('div');
+            tile.className = 'file-tile';
+
+            // Use a placeholder if poster_url is missing
+            const posterUrl = file.poster_url || 'https://i.ibb.co/qzmwLvx/No-Image-Available.jpg';
+
+            // Create an image element for the poster.
+            // This works for GIFs and other image formats.
+            const img = document.createElement('img');
+            img.src = posterUrl;
+            img.alt = 'Poster';
+            img.loading = 'lazy'; // Lazy load images for better performance
+            img.onerror = () => {
+                // If the primary image fails, replace it with the placeholder.
+                img.src = 'https://i.ibb.co/qzmwLvx/No-Image-Available.jpg';
+            };
+            tile.appendChild(img);
+
+
+            // Create overlay for file name and button
+            const overlay = document.createElement('div');
+            overlay.className = 'overlay';
+
+            const fileName = document.createElement('div');
+            fileName.className = 'file-name';
+            fileName.textContent = file.file_name || 'Untitled';
+            fileName.title = file.file_name || 'Untitled'; // Show full name on hover
+            overlay.appendChild(fileName);
+
+            const detailsBtn = document.createElement('a');
+            detailsBtn.href = `simple_details.html?file_id=${file._id}`;
+            detailsBtn.className = 'btn btn-red stream-btn';
+            detailsBtn.textContent = 'Details';
+            overlay.appendChild(detailsBtn);
+
+            tile.appendChild(overlay);
+
+            // Add click event listener for tap-to-toggle on mobile
+            tile.addEventListener('click', (e) => {
+                if (e.target.classList.contains('stream-btn')) {
+                    return;
+                }
+                tile.classList.toggle('show-overlay');
+            });
+
+            return tile;
+        }
+
+        /**
+         * Sets up the pagination controls.
+         * @param {number} totalPages The total number of pages.
+         * @param {number} currentPage The current active page.
+         */
+        function setupPagination(totalPages, currentPage) {
+            paginationContainer.innerHTML = ''; // Clear previous pagination
+
+            // Previous button
+            if (currentPage > 1) {
+                paginationContainer.appendChild(createPageLink(currentPage - 1, 'Previous'));
+            }
+
+            // Page numbers
+            for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+                paginationContainer.appendChild(createPageLink(i, i, i === currentPage));
+            }
+
+            // Next button
+            if (currentPage < totalPages) {
+                paginationContainer.appendChild(createPageLink(currentPage + 1, 'Next'));
+            }
+        }
+
+        /**
+         * Creates a single pagination link element.
+         * @param {number} page The page number this link points to.
+         * @param {string} text The text content for the link.
+         * @param {boolean} isActive Whether this link is the current page.
+         * @returns {HTMLElement} The created list item element.
+         */
+        function createPageLink(page, text, isActive = false) {
+            const li = document.createElement('li');
+            li.className = `page-item ${isActive ? 'active' : ''}`;
+            const a = document.createElement('a');
+            a.className = 'page-link';
+            a.href = '#';
+            a.textContent = text;
+            a.dataset.page = page; // Store page number in data attribute
+            li.appendChild(a);
+            return li;
+        }
+
+        /**
+         * Updates the visual style of the sort buttons.
+         */
+        function updateButtonStyles() {
+            recentBtn.className = `btn ${currentSort === 'recent' ? 'btn-danger' : 'btn-outline-light'}`;
+            oldestBtn.className = `btn ${currentSort === 'oldest' ? 'btn-danger' : 'btn-outline-light'}`;
+        }
+
+        // —————————————— Event Handlers ——————————————
+        const debouncedFetch = debounce(() => {
+            currentPage = 1; // Reset to first page on new search
+            fetchFiles();
+        }, 1000);
+
+        searchInput.addEventListener('input', (e) => {
+            currentSearch = e.target.value;
+            debouncedFetch();
+        });
+
+        gotoPageBtn.addEventListener('click', () => {
+            const page = parseInt(pageInput.value);
+            if (!isNaN(page) && page > 0 && page <= totalPages) {
+                currentPage = page;
+                fetchFiles();
+                pageInput.value = ''; // Clear input after use
+            } else {
+                alert(`Please enter a valid page number between 1 and ${totalPages}.`);
+            }
+        });
+
+        recentBtn.addEventListener('click', () => {
+            if (currentSort !== 'recent') {
+                currentSort = 'recent';
+                currentPage = 1;
+                updateButtonStyles();
+                fetchFiles();
+            }
+        });
+
+        oldestBtn.addEventListener('click', () => {
+            if (currentSort !== 'oldest') {
+                currentSort = 'oldest';
+                currentPage = 1;
+                updateButtonStyles();
+                fetchFiles();
+            }
+        });
+
+        paginationContainer.addEventListener('click', (e) => {
+            if (e.target.tagName === 'A' && e.target.dataset.page) {
+                e.preventDefault();
+                const page = parseInt(e.target.dataset.page);
+                if (page !== currentPage) {
+                    currentPage = page;
+                    fetchFiles();
+                }
+            }
+        });
+
+        // —————————————— Initialization ——————————————
+        /**
+         * Initializes the page, checks authentication, and loads initial data.
+         */
+        function initializeApp() {
+            if (!token) {
+                window.location.href = 'login.html';
+                return; // Stop execution if not authenticated
+            }
+
+            loadUser();
+            updateButtonStyles();
+            fetchFiles();
+        }
+
+        // Start the application
+        initializeApp();
     </script>
 </body>
 
