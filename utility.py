@@ -108,6 +108,7 @@ def build_search_pipeline(query, match_query, skip, limit):
             "poster_url": 1,
             "tmdb_id": 1,
             "tmdb_type": 1,
+            "poster_delete_url": 1,
             "score": {"$meta": "searchScore"}
         }
     }
