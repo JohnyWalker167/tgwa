@@ -433,6 +433,14 @@
                 editPosterButton.onclick = () => openPosterModal(file);
                 item.appendChild(editPosterButton);
 
+                // Add Del Poster button if delete_url exists
+                if (file.poster_delete_url) {
+                    const delPosterBtn = document.createElement('button');
+                    delPosterBtn.textContent = 'Del Poster';
+                    delPosterBtn.onclick = () => window.open(file.poster_delete_url, '_blank');
+                    item.appendChild(delPosterBtn);
+                }
+
                 const deleteButton = document.createElement('button');
                 deleteButton.textContent = 'Delete';
                 deleteButton.onclick = () => deleteFile(file.id);

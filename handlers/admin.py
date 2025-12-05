@@ -131,7 +131,8 @@ async def get_files(admin_id: int = Depends(get_current_admin), page: int = 1, s
             "id": str(file.get("_id")),
             "file_name": file.get("file_name"),
             "tmdb_id": file.get("tmdb_id"),
-            "poster_url": file.get("poster_url")
+            "poster_url": file.get("poster_url"),
+            "poster_delete_url": file.get("poster_delete_url"), 
         })
         
     total_pages = (total_files + page_size - 1) // page_size
@@ -292,8 +293,14 @@ async def update_tmdb_entry(tmdb_id: str, tmdb_type: str, data: dict, admin_id: 
 async def update_file_poster(file_id: str, data: dict, admin_id: int = Depends(get_current_admin)):
     poster_url = data.get("poster_url")
     try:
-        imgbb_url = await upload_to_imgbb(poster_url)
-        await files_col.update_one({"_id": ObjectId(file_id)}, {"$set": {"poster_url": imgbb_url}})
+        # Expect upload_to_imgbb to return a dict {"url": ..., "delete_url": ...}
+        imgbb_data = await upload_to_imgbb(poster_url)
+        url = imgbb_data.get("url")
+        delete_url = imgbb_data.get("delete_url")
+        db_update = {"poster_url": url}
+        if delete_url:
+            db_update["poster_delete_url"] = delete_url
+        await files_col.update_one({"_id": ObjectId(file_id)}, {"$set": db_update})
         invalidate_cache()
         return {"status": "success"}
     except ValueError as e:

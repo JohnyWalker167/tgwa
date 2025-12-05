@@ -55,7 +55,7 @@ async def upload_to_imgbb(image_url):
         # 2. Upload the local file
         client = imgbbpy.AsyncClient(IMGBB_API_KEY)
         image = await client.upload(file=temp_file_path)
-        return image.url
+        return image
 
     except Exception as e:
         logger.error(f"Error during imgbb upload process: {e}")
