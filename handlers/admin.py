@@ -103,13 +103,23 @@ async def get_channels(admin_id: int = Depends(get_current_admin)):
     return channels
 
 @router.get("/files")
-async def get_files(admin_id: int = Depends(get_current_admin), page: int = 1, search: str = None, no_tmdb_id: bool = False, channel_id: int = None):
+async def get_files(
+    admin_id: int = Depends(get_current_admin),
+    page: int = 1,
+    search: str = None,
+    no_tmdb_id: bool = False,
+    no_poster_url: bool = False,  
+    channel_id: int = None
+):
     page_size = 10
     skip = (page - 1) * page_size
     query = {}
     
     if no_tmdb_id:
         query["tmdb_id"] = {"$exists": False}
+    
+    if no_poster_url:
+        query["poster_url"] = {"$exists": False}  
     
     if channel_id:
         query["channel_id"] = channel_id

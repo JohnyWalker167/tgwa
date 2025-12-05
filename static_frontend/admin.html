@@ -237,6 +237,13 @@
                 Only files with no TMDB ID
             </label>
         </div>
+        <!-- New Checkbox: Only files with no Poster URL -->
+        <div class="form-check mt-2">
+            <input class="form-check-input" type="checkbox" id="no-poster-url-filter">
+            <label class="form-check-label" for="no-poster-url-filter">
+                Only files with no Poster URL
+            </label>
+        </div>
         <select id="channel-filter" class="form-select mt-2">
             <option value="">All Channels</option>
         </select>
@@ -294,6 +301,7 @@
         let tmdbTypeFilter = '';
         let fileSearchQuery = '';
         let noTmdbIdFilter = false;
+        let noPosterUrlFilter = false; // <-- new variable
         let channelFilter = '';
         const selectedFileIds = new Set();
         let currentTmdbSelection = null;
@@ -407,7 +415,11 @@
         }
 
         async function loadFiles() {
-            const response = await fetchWithAuth(`${API_BASE_URL}/api/admin/files?page=${filesCurrentPage}&search=${fileSearchQuery}&no_tmdb_id=${noTmdbIdFilter}&channel_id=${channelFilter}`);
+            // Update API URL to include the new filter
+            const response = await fetchWithAuth(
+                `${API_BASE_URL}/api/admin/files?page=${filesCurrentPage}&search=${fileSearchQuery}` +
+                `&no_tmdb_id=${noTmdbIdFilter}&no_poster_url=${noPosterUrlFilter}&channel_id=${channelFilter}`
+            );
             if (!response || !response.ok) return;
             const data = await response.json();
             const list = document.getElementById('files-list');
@@ -552,6 +564,13 @@
 
         document.getElementById('no-tmdb-id-filter').addEventListener('change', (e) => {
             noTmdbIdFilter = e.target.checked;
+            filesCurrentPage = 1;
+            loadFiles();
+        });
+
+        // Add event listener for No Poster URL filter
+        document.getElementById('no-poster-url-filter').addEventListener('change', (e) => {
+            noPosterUrlFilter = e.target.checked;
             filesCurrentPage = 1;
             loadFiles();
         });
