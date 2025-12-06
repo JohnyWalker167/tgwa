@@ -379,6 +379,7 @@
                     displayMovies(data.media);
                     setupPagination(data.total_pages, data.current_page);
                     await displayFilterTag(genre, cast, director);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                 } else {
                     console.error('Failed to fetch movies');
                 }
@@ -516,23 +517,29 @@
             const pagination = document.getElementById('pagination');
             pagination.innerHTML = '';
 
-            const prevDisabled = currentPage === 1;
-            const nextDisabled = currentPage === totalPages;
+            // Previous button
+            if (currentPage > 1) {
+                const prev = document.createElement('li');
+                prev.className = 'page-item';
+                prev.innerHTML = `<a class="page-link" href="#" onclick="fetchMovies(${currentPage - 1})">Previous</a>`;
+                pagination.appendChild(prev);
+            }
 
-            const prev = document.createElement('li');
-            prev.className = `page-item ${prevDisabled ? 'disabled' : ''}`;
-            prev.innerHTML = `<a class="page-link" href="#" onclick="${prevDisabled ? '' : `fetchMovies(${currentPage - 1})`}">Previous</a>`;
-            pagination.appendChild(prev);
+            // Page indicator
+            if (totalPages > 0) {
+                const pageIndicator = document.createElement('li');
+                pageIndicator.className = 'page-item active';
+                pageIndicator.innerHTML = `<span class="page-link">${currentPage} / ${totalPages}</span>`;
+                pagination.appendChild(pageIndicator);
+            }
 
-            const pageIndicator = document.createElement('li');
-            pageIndicator.className = 'page-item';
-            pageIndicator.innerHTML = `<span class="page-link">${currentPage}</span>`;
-            pagination.appendChild(pageIndicator);
-
-            const next = document.createElement('li');
-            next.className = `page-item ${nextDisabled ? 'disabled' : ''}`;
-            next.innerHTML = `<a class="page-link" href="#" onclick="${nextDisabled ? '' : `fetchMovies(${currentPage + 1})`}">Next</a>`;
-            pagination.appendChild(next);
+            // Next button
+            if (currentPage < totalPages) {
+                const next = document.createElement('li');
+                next.className = 'page-item';
+                next.innerHTML = `<a class="page-link" href="#" onclick="fetchMovies(${currentPage + 1})">Next</a>`;
+                pagination.appendChild(next);
+            }
         }
 
         /**
