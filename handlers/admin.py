@@ -303,6 +303,69 @@ async def update_tmdb_entry(tmdb_id: str, tmdb_type: str, data: dict, admin_id: 
 async def update_file_poster(file_id: str, data: dict, admin_id: int = Depends(get_current_admin)):
     poster_url = data.get("poster_url")
     try:
+        imgbb_data = await upload_to_imgbb(poster_url)
+        if imgbb_data is None:
+            raise ValueError("Image upload failed, received no data.")
+        url = imgbb_data.get("url")
+        delete_url = imgbb_data.get("delete_url")
+        db_update = {"poster_url": url}
+        if delete_url:
+            db_update["poster_delete_url"] = delete_url
+        await files_col.update_one({"_id": ObjectId(file_id)}, {"$set": db_update})
+        invalidate_cache()
+        return {"status": "success", "poster_url": url}
+    except ValueError as e:
+        logger.error(f"Failed to upload poster for file {file_id}: {e}")
+        raise HTTPException(status_code=400, detail="Failed to upload image. Please try again.")
+    
+@router.delete("/files/{file_id}")
+async def delete_file(file_id: str, admin_id: int = Depends(get_current_admin)):
+    await files_col.delete_one({"_id": ObjectId(file_id)})
+    invalidate_cache()
+    return {"status": "success"}
+= int(tmdb_id)
+    except ValueError:
+        tmdb_id_converted = tmdb_id
+        
+    await tmdb_col.delete_one({"tmdb_id": tmdb_id_converted, "tmdb_type": tmdb_type})
+    await files_col.update_many({"tmdb_id": tmdb_id_converted, "tmdb_type": tmdb_type}, {"$unset": {"tmdb_id": "", "tmdb_type": ""}})
+    invalidate_cache()
+    return {"status": "success"}
+
+@router.put("/tmdb/{tmdb_id}/{tmdb_type}")
+async def update_tmdb_entry(tmdb_id: str, tmdb_type: str, data: dict, admin_id: int = Depends(get_current_admin)):
+    # Convert to int if possible, otherwise keep as string
+    try:
+        tmdb_id_converted = int(tmdb_id)
+    except ValueError:
+        tmdb_id_converted = tmdb_id
+
+    rating_str = data.get("rating")
+    if rating_str == "":
+        rating = None
+    else:
+        try:
+            rating = float(rating_str)
+        except (ValueError, TypeError):
+            rating = None
+            
+    update_data = {
+        "title": data.get("title"),
+        "rating": rating,
+        "plot": data.get("plot"),
+        "year": data.get("year"),
+    }
+    if data.get("poster_path") is not None:
+        update_data["poster_path"] = data.get("poster_path")
+
+    await tmdb_col.update_one({"tmdb_id": tmdb_id_converted, "tmdb_type": tmdb_type}, {"$set": update_data})
+    invalidate_cache()
+    return {"status": "success"}
+
+@router.put("/files/{file_id}")
+async def update_file_poster(file_id: str, data: dict, admin_id: int = Depends(get_current_admin)):
+    poster_url = data.get("poster_url")
+    try:
         # Expect upload_to_imgbb to return a dict {"url": ..., "delete_url": ...}
         imgbb_data = await upload_to_imgbb(poster_url)
         url = imgbb_data.get("url")
