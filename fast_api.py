@@ -348,7 +348,7 @@ async def get_others(page: int = 1, search: str = None, sort: str = "recent", us
     if cached_data:
         return cached_data
         
-    page_size = 12
+    page_size = 10
     skip = (page - 1) * page_size
 
     sort_order = [("_id", -1)] if sort == "recent" else [("_id", 1)]
