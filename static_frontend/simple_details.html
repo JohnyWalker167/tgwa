@@ -6,11 +6,14 @@
     <title>Details</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        /* —————————— Base Styles —————————— */
         body {
             background-color: #141414;
             color: #fff;
             font-family: Arial, sans-serif;
         }
+        
+        /* —————————— Backdrop —————————— */
         .backdrop {
             position: fixed;
             top: 0;
@@ -22,6 +25,7 @@
             filter: blur(10px);
             z-index: -1;
         }
+        
         .backdrop::before {
             content: '';
             position: absolute;
@@ -31,23 +35,32 @@
             height: 100%;
             background-color: rgba(0, 0, 0, 0.6);
         }
+        
+        /* —————————— Container —————————— */
         .container {
             position: relative;
             z-index: 1;
             padding: 1rem;
         }
+        
         .details-container {
             text-align: center;
         }
+        
+        /* —————————— Buttons —————————— */
         .btn-primary {
             background-image: linear-gradient(to right, #e50914, #f40612);
             border: none;
         }
+        
+        /* —————————— Typography —————————— */
         h1 {
             font-size: 1.5rem;
-            word-break: break-all; /* Ensures long filenames wrap properly */
+            word-break: break-all;
             margin-top: 1rem;
         }
+        
+        /* —————————— Images —————————— */
         img {
             border-radius: 10px;
             width: 100%;
@@ -55,7 +68,7 @@
             object-fit: cover;
         }
 
-        /* Responsive Layout */
+        /* —————————— Responsive Layout —————————— */
         @media (max-width: 768px) {
             .row {
                 flex-direction: column;
@@ -72,7 +85,8 @@
                 width: 100%;
             }
         }
-        /* ---------- Loader ---------- */
+        
+        /* —————————— Loader —————————— */
         .loader-container {
             position: fixed;
             top: 0;
@@ -86,6 +100,7 @@
             align-items: center;
             z-index: 9999;
         }
+        
         .loader {
             border: 5px solid #f3f3f3;
             border-top: 5px solid #e50914;
@@ -103,10 +118,15 @@
     </style>
 </head>
 <body>
+    <!-- Loader element -->
     <div id="loader" class="loader-container">
         <div class="loader"></div>
     </div>
+    
+    <!-- Backdrop with blurred background image -->
     <div class="backdrop"></div>
+    
+    <!-- Main container -->
     <div class="container mt-4">
         <a href="others.html" class="btn btn-primary mb-4 w-100">Back to Others</a>
         <div id="details-container" class="details-container">
@@ -116,16 +136,27 @@
 
     <script src="config.js"></script>
     <script>
+        // —————————————— DOM Elements & State ——————————————
         const loader = document.getElementById('loader');
         const token = localStorage.getItem('authToken');
+
+        // —————————————— Authorization ——————————————
         if (!token) {
             window.location.href = 'login.html';
         }
-
         const authHeader = { 'Authorization': `Bearer ${token}` };
+        
+        // Get the file ID from the URL
         const urlParams = new URLSearchParams(window.location.search);
         const fileId = urlParams.get('file_id');
 
+        // —————————————— API Functions ——————————————
+        /**
+         * Fetches data with authorization headers and handles 401 errors.
+         * @param {string} url - The URL to fetch from.
+         * @param {object} options - Fetch options.
+         * @returns {Promise<Response>} - The fetch response.
+         */
         async function fetchWithAuth(url, options = {}) {
             loader.style.display = 'flex';
             try {
@@ -142,6 +173,9 @@
             }
         }
 
+        /**
+         * Fetches and renders the file details.
+         */
         async function fetchAndRenderDetails() {
             try {
                 const response = await fetchWithAuth(`${API_BASE_URL}/api/file/${fileId}`);
@@ -156,6 +190,11 @@
             }
         }
 
+        // —————————————— UI Rendering Functions ——————————————
+        /**
+         * Renders the file details on the page.
+         * @param {object} details - The file details object.
+         */
         function renderDetails(details) {
             const detailsContainer = document.getElementById('details-container');
             const backdrop = document.querySelector('.backdrop');
@@ -175,34 +214,7 @@
             `;
         }
 
-        async function sendFile(fileId, button) {
-            try {
-                const response = await fetchWithAuth(`${API_BASE_URL}/api/send_file`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ file_id: fileId })
-                });
-
-                if (response.ok) {
-                    button.textContent = 'Sent!';
-                    button.disabled = true;
-                    button.classList.remove('btn-primary');
-                    button.classList.add('btn-secondary');
-                } else if (response.status === 429) {
-                    alert('Your Limit Has Exceeded. Try again later');
-                    button.disabled = true;
-                    button.classList.remove('btn-primary');
-                    button.classList.add('btn-secondary');
-                } else {
-                    console.error('Failed to send file');
-                    alert('Failed to send file. Please try again.');
-                }
-            } catch (error) {
-                console.error('Error sending file:', error);
-                alert('An error occurred. Please try again.');
-            }
-        }
-
+        // —————————————— Initial Load ——————————————
         fetchAndRenderDetails();
     </script>
 </body>
