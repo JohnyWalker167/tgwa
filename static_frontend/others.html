@@ -378,43 +378,28 @@ function setupPagination(totalPages, currentPage) {
     const pagination = document.getElementById('pagination');
     pagination.innerHTML = '';
 
-    // Previous button
-    if (currentPage > 1) {
-        const prev = document.createElement('li');
-        prev.className = 'page-item';
-        prev.innerHTML = `<a class="page-link" href="#" onclick="fetchMovies(${currentPage - 1})">Previous</a>`;
-        pagination.appendChild(prev);
-    }
+    const prevDisabled = currentPage === 1;
+    const nextDisabled = currentPage === totalPages;
 
-    // ---- Max 3 numbered pages ----
-    let start = currentPage - 1;
-    let end = currentPage + 1;
+    const prev = document.createElement('li');
+    prev.className = `page-item ${prevDisabled ? 'disabled' : ''}`;
+    prev.innerHTML = `<a class="page-link" href="#" onclick="${prevDisabled ? '' : `handlePageChange(${currentPage - 1})`}">Previous</a>`;
+    pagination.appendChild(prev);
 
-    // Adjust boundaries
-    if (start < 1) {
-        start = 1;
-        end = Math.min(3, totalPages);
-    }
-    if (end > totalPages) {
-        end = totalPages;
-        start = Math.max(1, totalPages - 2);
-    }
+    const pageIndicator = document.createElement('li');
+    pageIndicator.className = 'page-item';
+    pageIndicator.innerHTML = `<span class="page-link">${currentPage}</span>`;
+    pagination.appendChild(pageIndicator);
 
-    // Create numbered pages
-    for (let i = start; i <= end; i++) {
-        const page = document.createElement('li');
-        page.className = `page-item ${i === currentPage ? 'active' : ''}`;
-        page.innerHTML = `<a class="page-link" href="#" onclick="fetchMovies(${i})">${i}</a>`;
-        pagination.appendChild(page);
-    }
+    const next = document.createElement('li');
+    next.className = `page-item ${nextDisabled ? 'disabled' : ''}`;
+    next.innerHTML = `<a class="page-link" href="#" onclick="${nextDisabled ? '' : `handlePageChange(${currentPage + 1})`}">Next</a>`;
+    pagination.appendChild(next);
+}
 
-    // Next button
-    if (currentPage < totalPages) {
-        const next = document.createElement('li');
-        next.className = 'page-item';
-        next.innerHTML = `<a class="page-link" href="#" onclick="fetchMovies(${currentPage + 1})">Next</a>`;
-        pagination.appendChild(next);
-    }
+function handlePageChange(page) {
+    currentPage = page;
+    fetchFiles();
 }
 
 

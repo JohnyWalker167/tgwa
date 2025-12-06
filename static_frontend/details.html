@@ -613,26 +613,23 @@
             const pagination = document.getElementById('pagination');
             pagination.innerHTML = '';
 
-            if (currentPage > 1) {
-                const prev = document.createElement('li');
-                prev.className = 'page-item';
-                prev.innerHTML = `<a class="page-link" href="#" onclick="fetchFiles(${currentPage - 1}, ${seasonNumber})">Previous</a>`;
-                pagination.appendChild(prev);
-            }
+            const prevDisabled = currentPage === 1;
+            const nextDisabled = currentPage === totalPages;
 
-            for (let i = Math.max(1, currentPage - 1); i <= Math.min(totalPages, currentPage + 1); i++) {
-                const page = document.createElement('li');
-                page.className = `page-item ${i === currentPage ? 'active' : ''}`;
-                page.innerHTML = `<a class="page-link" href="#" onclick="fetchFiles(${i}, ${seasonNumber})">${i}</a>`;
-                pagination.appendChild(page);
-            }
+            const prev = document.createElement('li');
+            prev.className = `page-item ${prevDisabled ? 'disabled' : ''}`;
+            prev.innerHTML = `<a class="page-link" href="#" onclick="${prevDisabled ? '' : `fetchFiles(${currentPage - 1}, ${seasonNumber})`}">Previous</a>`;
+            pagination.appendChild(prev);
 
-            if (currentPage < totalPages) {
-                const next = document.createElement('li');
-                next.className = 'page-item';
-                next.innerHTML = `<a class="page-link" href="#" onclick="fetchFiles(${currentPage + 1}, ${seasonNumber})">Next</a>`;
-                pagination.appendChild(next);
-            }
+            const pageIndicator = document.createElement('li');
+            pageIndicator.className = 'page-item';
+            pageIndicator.innerHTML = `<span class="page-link">${currentPage}</span>`;
+            pagination.appendChild(pageIndicator);
+
+            const next = document.createElement('li');
+            next.className = `page-item ${nextDisabled ? 'disabled' : ''}`;
+            next.innerHTML = `<a class="page-link" href="#" onclick="${nextDisabled ? '' : `fetchFiles(${currentPage + 1}, ${seasonNumber})`}">Next</a>`;
+            pagination.appendChild(next);
         }
 
         // —————————————— Modal Functions ——————————————

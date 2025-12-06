@@ -192,6 +192,38 @@
             opacity: 1;
             padding-left: 0.5rem;
         }
+
+        /* Tile loader */
+        .tile-loader {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .tile-loader div {
+            width: 40px;
+            height: 40px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #e50914;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .movie-tile img {
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out, transform 0.3s;
+        }
+
+        .movie-tile img.loaded {
+            opacity: 1;
+        }
     </style>
 </head>
 
@@ -435,9 +467,27 @@
                 const tile = document.createElement('div');
                 tile.className = 'movie-tile';
 
+                const spinner = document.createElement('div');
+                spinner.className = 'tile-loader';
+                const innerSpinner = document.createElement('div');
+                spinner.appendChild(innerSpinner);
+                tile.appendChild(spinner);
+
                 const img = document.createElement('img');
                 img.src = movie.poster_path ? `${POSTER_BASE_URL}${movie.poster_path}` : 'https://i.ibb.co/qzmwLvx/No-Image-Available.jpg';
                 img.loading = 'lazy';
+
+                img.onload = () => {
+                    spinner.style.display = 'none';
+                    img.classList.add('loaded');
+                };
+
+                img.onerror = () => {
+                    img.src = 'https://i.ibb.co/qzmwLvx/No-Image-Available.jpg';
+                    spinner.style.display = 'none';
+                    img.classList.add('loaded');
+                };
+                
                 tile.appendChild(img);
 
                 if (movie.rating !== undefined && movie.rating !== null) {
@@ -466,26 +516,23 @@
             const pagination = document.getElementById('pagination');
             pagination.innerHTML = '';
 
-            if (currentPage > 1) {
-                const prev = document.createElement('li');
-                prev.className = 'page-item';
-                prev.innerHTML = `<a class="page-link" href="#" onclick="fetchMovies(${currentPage - 1})">Previous</a>`;
-                pagination.appendChild(prev);
-            }
+            const prevDisabled = currentPage === 1;
+            const nextDisabled = currentPage === totalPages;
 
-            for (let i = Math.max(1, currentPage - 1); i <= Math.min(totalPages, currentPage + 1); i++) {
-                const page = document.createElement('li');
-                page.className = `page-item ${i === currentPage ? 'active' : ''}`;
-                page.innerHTML = `<a class="page-link" href="#" onclick="fetchMovies(${i})">${i}</a>`;
-                pagination.appendChild(page);
-            }
+            const prev = document.createElement('li');
+            prev.className = `page-item ${prevDisabled ? 'disabled' : ''}`;
+            prev.innerHTML = `<a class="page-link" href="#" onclick="${prevDisabled ? '' : `fetchMovies(${currentPage - 1})`}">Previous</a>`;
+            pagination.appendChild(prev);
 
-            if (currentPage < totalPages) {
-                const next = document.createElement('li');
-                next.className = 'page-item';
-                next.innerHTML = `<a class="page-link" href="#" onclick="fetchMovies(${currentPage + 1})">Next</a>`;
-                pagination.appendChild(next);
-            }
+            const pageIndicator = document.createElement('li');
+            pageIndicator.className = 'page-item';
+            pageIndicator.innerHTML = `<span class="page-link">${currentPage}</span>`;
+            pagination.appendChild(pageIndicator);
+
+            const next = document.createElement('li');
+            next.className = `page-item ${nextDisabled ? 'disabled' : ''}`;
+            next.innerHTML = `<a class="page-link" href="#" onclick="${nextDisabled ? '' : `fetchMovies(${currentPage + 1})`}">Next</a>`;
+            pagination.appendChild(next);
         }
 
         /**
