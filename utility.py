@@ -35,7 +35,7 @@ async def upload_to_imgbb(image_url):
     Downloads an image, uploads it to imgbb, and returns the new URL.
     """
     if not image_url:
-        return None
+      raise ValueError("Image URL cannot be empty.")
 
     temp_file_path = f"/tmp/{uuid.uuid4()}.jpg"
     client = None
