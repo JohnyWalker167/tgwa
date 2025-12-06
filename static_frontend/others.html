@@ -13,19 +13,35 @@
             color: #fff;
         }
 
+        /* GRID */
         .file-grid {
             display: grid;
-            grid-template-columns: repeat(2, minmax(200px, 1fr));
+            grid-template-columns: repeat(4, minmax(200px, 1fr));
             gap: 1rem;
         }
 
+        @media (max-width: 600px) {
+            .file-grid {
+                grid-template-columns: 1fr !important;
+                gap: 0.5rem;
+            }
+        }
+
+        /* TILE */
         .file-tile {
             position: relative;
             cursor: pointer;
             border-radius: 10px;
             overflow: hidden;
             width: 100%;
-            min-height: 200px;
+            height: 240px;
+            background-color: #222;
+        }
+
+        @media (max-width: 600px) {
+            .file-tile {
+                height: 200px;
+            }
         }
 
         .image-wrapper {
@@ -33,10 +49,9 @@
             height: 100%;
         }
 
-        .image-wrapper img,
-        .image-wrapper canvas {
+        .image-wrapper img {
             width: 100%;
-            height: auto;
+            height: 100%;
             object-fit: contain;
             display: block;
             opacity: 0;
@@ -47,142 +62,52 @@
             opacity: 1;
         }
 
-        .file-tile:hover .image-wrapper img,
-        .file-tile:hover .image-wrapper canvas {
-            transform: scale(1.1);
+        .file-tile:hover .image-wrapper img {
+            transform: scale(1.05);
         }
 
+        /* Overlay */
         .overlay {
             position: absolute;
             inset: 0;
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: flex-end;
             opacity: 0;
-            transition: opacity 0.3s ease;
+            transform: translateY(50%);
+            transition: opacity 0.3s ease, transform 0.3s ease;
             padding-bottom: 0.5rem;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
         }
 
-        .file-tile:hover .overlay,
         .file-tile.show-overlay .overlay {
             opacity: 1;
-        }
-
-        @media (max-width: 600px) {
-            .file-grid {
-                grid-template-columns: repeat(1, minmax(150px, 1fr));
-                gap: 0.5rem;
-            }
-
-            .file-tile {
-                border-radius: 5px;
-            }
-
-            #search-input {
-                width: 100% !important;
-            }
-
-            .d-flex.justify-content-between {
-                flex-direction: column;
-                align-items: stretch !important;
-            }
-
-            .d-flex.justify-content-between>* {
-                margin-bottom: 0.5rem;
-            }
-        }
-
-        .stream-btn {
-            font-size: 0.8rem;
-            padding: 0.25rem 0.5rem;
-            opacity: 0;
-            transform: translateY(10px);
-            transition: all 0.3s ease;
-        }
-
-        .file-tile:hover .stream-btn {
-            opacity: 1;
             transform: translateY(0);
-        }
-
-        .form-control {
-            background-color: #333;
-            color: #fff;
-            border: 1px solid #555;
-        }
-
-        .btn-blue {
-            background-color: #007bff;
-            color: #fff;
-        }
-
-        .btn-red {
-            background-color: #e50914;
-            color: #fff;
-        }
-
-        .pagination .page-link {
-            background-color: #222;
-            border-color: #333;
-            color: #fff;
-        }
-
-        .pagination .page-item.active .page-link {
-            background-image: linear-gradient(to right, #e50914, #f40612);
-            border: none;
         }
 
         .file-name {
             color: #fff;
             font-size: 0.85rem;
-            font-weight: 500;
-            text-align: center;
             margin-bottom: 0.3rem;
-            padding: 0 0.5rem;
-            width: 100%;
-            word-break: break-all;
+            text-align: center;
+            line-height: 1.1;
         }
 
         @media (max-width: 600px) {
             .file-name {
-                font-size: 0.8rem;
+                display: none !important;
             }
         }
 
-        /* Fullscreen Loader */
-        .loader-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(5px);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-
-        .loader {
-            width: 50px;
-            height: 50px;
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #e50914;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
+        .stream-btn {
+            font-size: 0.85rem;
+            padding: 0.35rem 1rem;
+            background-color: #e50914;
+            color: #fff;
+            border: none;
+            border-radius: 20px;
+            text-decoration: none !important;
         }
 
         /* Tile loader */
@@ -195,29 +120,70 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            background-color: rgba(0, 0, 0, 0.3);
             z-index: 10;
-            pointer-events: none;
         }
 
         .tile-loader div {
-            width: 40px;
-            height: 40px;
-            border: 5px solid #f3f3f3;
+            width: 30px;
+            height: 30px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #e50914;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Pagination */
+        .pagination .page-link {
+            background-color: #222;
+            border-color: #333;
+            color: #fff;
+        }
+
+        .pagination .page-item.active .page-link {
+            background-color: #e50914;
+            border: none;
+        }
+
+        /* Fullscreen loader */
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.4);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #bbb;
             border-top: 5px solid #e50914;
             border-radius: 50%;
             animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
         }
     </style>
 </head>
 
 <body>
-    <!-- Fullscreen Loader -->
-    <div id="loader" class="loader-container">
+    <!-- Fullscreen loader -->
+    <div id="loader">
         <div class="loader"></div>
     </div>
 
     <div class="container mt-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
             <h1 id="welcome-message">Welcome!</h1>
             <input id="search-input" class="form-control w-50" type="search" placeholder="Search">
         </div>
@@ -233,7 +199,7 @@
             <ul id="pagination" class="pagination justify-content-center mt-4"></ul>
         </nav>
 
-        <div class="d-flex justify-content-center mt-2">
+        <div class="d-flex justify-content-center mt-2 flex-wrap">
             <input type="number" id="page-input" class="form-control" style="width: 100px;" placeholder="Page">
             <button id="goto-page" class="btn btn-danger ms-2">Go</button>
         </div>
@@ -243,13 +209,13 @@
     <script>
         const loader = document.getElementById('loader');
         const searchInput = document.getElementById('search-input');
-        const pageInput = document.getElementById('page-input');
-        const gotoPageBtn = document.getElementById('goto-page');
         const recentBtn = document.getElementById('recent-btn');
         const oldestBtn = document.getElementById('oldest-btn');
         const fileGrid = document.getElementById('file-grid');
         const paginationContainer = document.getElementById('pagination');
         const welcomeMessage = document.getElementById('welcome-message');
+        const pageInput = document.getElementById('page-input');
+        const gotoPageBtn = document.getElementById('goto-page');
 
         const token = localStorage.getItem('authToken');
         let currentSort = 'recent';
@@ -268,10 +234,12 @@
         async function fetchWithAuth(url, options = {}) {
             loader.style.display = 'flex';
             try {
-                const authHeader = { 'Authorization': `Bearer ${token}` };
                 const response = await fetch(url, {
                     ...options,
-                    headers: { ...options.headers, ...authHeader }
+                    headers: {
+                        ...options.headers,
+                        Authorization: `Bearer ${token}`
+                    }
                 });
 
                 if (response.status === 401) {
@@ -286,18 +254,17 @@
         }
 
         async function fetchFiles() {
-            if (currentPage < 1 || (currentPage > totalPages && totalPages > 0)) return;
-
             const url = `${API_BASE_URL}/api/others?page=${currentPage}&search=${currentSearch}&sort=${currentSort}`;
             const response = await fetchWithAuth(url);
             if (!response?.ok) return;
 
             const data = await response.json();
             totalPages = data.total_pages;
-            displayFiles(data.files);
-            setupPagination(data.total_pages, data.current_page);
 
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            displayFiles(data.files);
+            setupPagination(totalPages, data.current_page);
+
+            setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 50);
         }
 
         async function loadUser() {
@@ -310,10 +277,12 @@
 
         function displayFiles(files) {
             fileGrid.innerHTML = '';
+
             if (!files?.length) {
                 fileGrid.innerHTML = '<p>No files found.</p>';
                 return;
             }
+
             files.forEach(file => fileGrid.appendChild(createFileTile(file)));
         }
 
@@ -321,113 +290,92 @@
             const tile = document.createElement('div');
             tile.className = 'file-tile';
 
+            /* Loader spinner */
+            const tileLoader = document.createElement('div');
+            tileLoader.className = 'tile-loader';
             const spinner = document.createElement('div');
-            spinner.className = 'tile-loader';
-            const innerSpinner = document.createElement('div');
-            spinner.appendChild(innerSpinner);
-            tile.appendChild(spinner);
+            tileLoader.appendChild(spinner);
+            tile.appendChild(tileLoader);
 
             const wrapper = document.createElement('div');
             wrapper.className = 'image-wrapper';
 
             const img = document.createElement('img');
             img.src = file.poster_url || 'https://i.ibb.co/qzmwLvx/No-Image-Available.jpg';
-            img.alt = 'Poster';
             img.loading = 'lazy';
 
             img.onload = () => {
-                spinner.style.display = 'none';
+                tileLoader.style.display = 'none';
                 img.classList.add('loaded');
             };
-
             img.onerror = () => {
                 img.src = 'https://i.ibb.co/qzmwLvx/No-Image-Available.jpg';
-                spinner.style.display = 'none';
+                tileLoader.style.display = 'none';
                 img.classList.add('loaded');
             };
 
             wrapper.appendChild(img);
             tile.appendChild(wrapper);
 
+            /* Overlay */
             const overlay = document.createElement('div');
             overlay.className = 'overlay';
 
             const fileName = document.createElement('div');
             fileName.className = 'file-name';
-            fileName.textContent = file.file_name || 'Untitled';
-            fileName.title = file.file_name || 'Untitled';
-            overlay.appendChild(fileName);
+            fileName.textContent = file.file_name;
 
             const detailsBtn = document.createElement('a');
             detailsBtn.href = `simple_details.html?file_id=${file._id}`;
-            detailsBtn.className = 'btn btn-red stream-btn';
+            detailsBtn.className = 'stream-btn';
             detailsBtn.textContent = 'Details';
-            overlay.appendChild(detailsBtn);
 
+            overlay.appendChild(fileName);
+            overlay.appendChild(detailsBtn);
             tile.appendChild(overlay);
 
+            /* Click logic */
             tile.addEventListener('click', (e) => {
-                if (!e.target.classList.contains('stream-btn'))
-                    tile.classList.toggle('show-overlay');
+                if (e.target.classList.contains('stream-btn')) return;
+                document.querySelectorAll('.file-tile.show-overlay').forEach(t => {
+                    if (t !== tile) t.classList.remove('show-overlay');
+                });
+                tile.classList.toggle('show-overlay');
             });
 
             return tile;
         }
 
-function setupPagination(totalPages, currentPage) {
-    const pagination = document.getElementById('pagination');
-    pagination.innerHTML = '';
+        function setupPagination(totalPages, current) {
+            paginationContainer.innerHTML = '';
 
-    const prevDisabled = currentPage === 1;
-    const nextDisabled = currentPage === totalPages;
+            if (current > 1) {
+                paginationContainer.innerHTML += `
+                    <li class="page-item">
+                        <a class="page-link" href="#" data-page="${current - 1}">Previous</a>
+                    </li>`;
+            }
 
-    const prev = document.createElement('li');
-    prev.className = `page-item ${prevDisabled ? 'disabled' : ''}`;
-    prev.innerHTML = `<a class="page-link" href="#" onclick="${prevDisabled ? '' : `handlePageChange(${currentPage - 1})`}">Previous</a>`;
-    pagination.appendChild(prev);
+            paginationContainer.innerHTML += `
+                <li class="page-item active">
+                    <span class="page-link">${current} / ${totalPages}</span>
+                </li>`;
 
-    const pageIndicator = document.createElement('li');
-    pageIndicator.className = 'page-item';
-    pageIndicator.innerHTML = `<span class="page-link">${currentPage}</span>`;
-    pagination.appendChild(pageIndicator);
-
-    const next = document.createElement('li');
-    next.className = `page-item ${nextDisabled ? 'disabled' : ''}`;
-    next.innerHTML = `<a class="page-link" href="#" onclick="${nextDisabled ? '' : `handlePageChange(${currentPage + 1})`}">Next</a>`;
-    pagination.appendChild(next);
-}
-
-function handlePageChange(page) {
-    currentPage = page;
-    fetchFiles();
-}
-
-
-        function createPageLink(page, text, active = false) {
-            const li = document.createElement('li');
-            li.className = `page-item ${active ? 'active' : ''}`;
-            const a = document.createElement('a');
-            a.className = 'page-link';
-            a.href = '#';
-            a.dataset.page = page;
-            a.textContent = text;
-            li.appendChild(a);
-            return li;
+            if (current < totalPages) {
+                paginationContainer.innerHTML += `
+                    <li class="page-item">
+                        <a class="page-link" href="#" data-page="${current + 1}">Next</a>
+                    </li>`;
+            }
         }
 
-        function updateButtonStyles() {
-            recentBtn.className = `btn ${currentSort === 'recent' ? 'btn-danger' : 'btn-outline-light'}`;
-            oldestBtn.className = `btn ${currentSort === 'oldest' ? 'btn-danger' : 'btn-outline-light'}`;
-        }
-
-        const debouncedFetch = debounce(() => {
-            currentPage = 1;
-            fetchFiles();
-        }, 800);
-
-        searchInput.addEventListener('input', e => {
-            currentSearch = e.target.value;
-            debouncedFetch();
+        paginationContainer.addEventListener('click', (e) => {
+            if (e.target.tagName === 'A') {
+                e.preventDefault();
+                const page = Number(e.target.dataset.page);
+                currentPage = page;
+                fetchFiles();
+            }
         });
 
         gotoPageBtn.addEventListener('click', () => {
@@ -440,33 +388,29 @@ function handlePageChange(page) {
             }
         });
 
+        function updateButtonStyles() {
+            recentBtn.className = currentSort === 'recent' ? 'btn btn-danger' : 'btn btn-outline-light';
+            oldestBtn.className = currentSort === 'oldest' ? 'btn btn-danger' : 'btn btn-outline-light';
+        }
+
+        searchInput.addEventListener('input', debounce((e) => {
+            currentSearch = e.target.value;
+            currentPage = 1;
+            fetchFiles();
+        }, 600));
+
         recentBtn.addEventListener('click', () => {
-            if (currentSort !== 'recent') {
-                currentSort = 'recent';
-                currentPage = 1;
-                updateButtonStyles();
-                fetchFiles();
-            }
+            currentSort = 'recent';
+            updateButtonStyles();
+            currentPage = 1;
+            fetchFiles();
         });
 
         oldestBtn.addEventListener('click', () => {
-            if (currentSort !== 'oldest') {
-                currentSort = 'oldest';
-                currentPage = 1; 
-                updateButtonStyles();
-                fetchFiles();
-            }
-        });
-
-        paginationContainer.addEventListener('click', (e) => {
-            if (e.target.tagName === 'A') {
-                e.preventDefault();
-                const page = Number(e.target.dataset.page);
-                if (page !== currentPage) {
-                    currentPage = page;
-                    fetchFiles();
-                }
-            }
+            currentSort = 'oldest';
+            updateButtonStyles();
+            currentPage = 1;
+            fetchFiles();
         });
 
         function initializeApp() {
@@ -483,4 +427,5 @@ function handlePageChange(page) {
     </script>
 </body>
 
-</html>
+        </html>
+        
