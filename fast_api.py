@@ -353,16 +353,20 @@ async def get_others(page: int = 1, search: str = None, sort: str = "recent", us
 
     sort_order = [("_id", -1)] if sort == "recent" else [("_id", 1)]
 
+    base_query = {
+        "channel_id": {"$nin": TMDB_CHANNEL_ID},
+        "poster_url": {"$exists": True, "$ne": None}
+    }
+
     if search:
         sanitized_search = bot.sanitize_query(search)
-        pipeline = build_search_pipeline(sanitized_search, {"channel_id": {"$nin": TMDB_CHANNEL_ID}}, skip, page_size)
+        pipeline = build_search_pipeline(sanitized_search, base_query, skip, page_size)
         result = await files_col.aggregate(pipeline).to_list(length=None)
         files = result[0]['results'] if result and 'results' in result[0] else []
         total_files = result[0]['totalCount'][0]['total'] if result and 'totalCount' in result[0] and result[0]['totalCount'] else 0
     else:
-        query = {"channel_id": {"$nin": TMDB_CHANNEL_ID}}
-        files = await files_col.find(query).sort(sort_order).skip(skip).limit(page_size).to_list(length=page_size)
-        total_files = await files_col.count_documents(query)
+        files = await files_col.find(base_query).sort(sort_order).skip(skip).limit(page_size).to_list(length=page_size)
+        total_files = await files_col.count_documents(base_query)
 
     for file in files:
         file["_id"] = str(file["_id"])
