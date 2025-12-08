@@ -131,7 +131,7 @@ async def get_files(
         files_data = result[0]['results'] if result and 'results' in result[0] else []
         total_files = result[0]['totalCount'][0]['total'] if result and 'totalCount' in result[0] and result[0]['totalCount'] else 0
     else:
-        files_cursor = files_col.find(query).sort("_id", 1).skip(skip).limit(page_size)
+        files_cursor = files_col.find(query).sort("_id", -1).skip(skip).limit(page_size)
         total_files = await files_col.count_documents(query)
         files_data = await files_cursor.to_list(length=page_size)
 
