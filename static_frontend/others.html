@@ -16,7 +16,7 @@
         /* GRID */
         .file-grid {
             display: grid;
-            grid-template-columns: repeat(3, minmax(200px, 1fr));
+            grid-template-columns: repeat(2, minmax(200px, 1fr));
             gap: 1rem;
         }
 
@@ -78,27 +78,16 @@
             transform: translateY(0);
         }
 
-        .file-name {
+        .file-name a {
             color: #fff;
+            text-decoration: none;
             font-size: 0.85rem;
             font-weight: bold;
-            margin-bottom: 0.3rem;
             text-align: center;
             line-height: 1.1;
             word-break: break-all;
             padding: 0.2rem;
             font-family: 'Roboto', sans-serif;
-        }
-
-
-        .stream-btn {
-            font-size: 0.85rem;
-            padding: 0.35rem 1rem;
-            background-color: #e50914;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            text-decoration: none !important;
         }
 
         /* Tile loader */
@@ -312,22 +301,22 @@
             const overlay = document.createElement('div');
             overlay.className = 'overlay';
 
-            const fileName = document.createElement('div');
-            fileName.className = 'file-name';
-            fileName.textContent = file.file_name;
+            const fileNameDiv = document.createElement('div');
+            fileNameDiv.className = 'file-name';
 
-            const detailsBtn = document.createElement('a');
-            detailsBtn.href = `simple_details.html?file_id=${file._id}`;
-            detailsBtn.className = 'stream-btn';
-            detailsBtn.textContent = 'Details';
+            const fileNameLink = document.createElement('a');
+            fileNameLink.href = `simple_details.html?file_id=${file._id}`;
+            fileNameLink.textContent = file.file_name;
 
-            overlay.appendChild(fileName);
-            overlay.appendChild(detailsBtn);
+            fileNameDiv.appendChild(fileNameLink);
+            overlay.appendChild(fileNameDiv);
             tile.appendChild(overlay);
 
             /* Click logic */
             tile.addEventListener('click', (e) => {
-                if (e.target.classList.contains('stream-btn')) return;
+                // Prevent toggling overlay if a link inside it is clicked
+                if (e.target.tagName === 'A') return;
+
                 document.querySelectorAll('.file-tile.show-overlay').forEach(t => {
                     if (t !== tile) t.classList.remove('show-overlay');
                 });
@@ -418,5 +407,4 @@
     </script>
 </body>
 
-        </html>
-        
+</html>
